@@ -1,0 +1,38 @@
+[
+  {
+    "id": "alt-5001",
+    "tenant_id": "tenant-default-001",
+    "rule_id": "RULE-WIN-001",
+    "title": "Encoded PowerShell Execution Detected",
+    "description": "Base64 encoded command execution observed on host workstation-01.corp.internal",
+    "severity": "high",
+    "status": "open",
+    "observed_at": "2026-10-05T10:15:30.000Z",
+    "created_at": "2026-10-05T10:15:32.000Z",
+    "event_ids": ["evt-1001"]
+  },
+  {
+    "id": "alt-5002",
+    "tenant_id": "tenant-default-001",
+    "rule_id": "RULE-NET-004",
+    "title": "Known Malicious C2 Domain Resolution",
+    "description": "DNS resolution request to known threat actor infrastructure",
+    "severity": "high",
+    "status": "open",
+    "observed_at": "2026-10-05T10:16:02.000Z",
+    "created_at": "2026-10-05T10:16:05.000Z",
+    "event_ids": ["evt-1002"]
+  },
+  {
+    "id": "alt-5003",
+    "tenant_id": "tenant-default-001",
+    "rule_id": "RULE-IDP-009",
+    "title": "Impossible Travel / External Privilege Escalation",
+    "description": "Service account logon from external Tor exit node IP",
+    "severity": "critical",
+    "status": "open",
+    "observed_at": "2026-10-05T10:18:45.000Z",
+    "created_at": "2026-10-05T10:18:50.000Z",
+    "event_ids": ["evt-1003"]
+  }
+]

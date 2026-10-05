@@ -1,0 +1,108 @@
+[
+  {
+    "event_id": "evt-1001",
+    "tenant_id": "tenant-default-001",
+    "source_layer": "endpoint",
+    "event_type": "process_execution",
+    "observed_at": "2026-10-05T10:15:30.000Z",
+    "severity": "medium",
+    "entities": [
+      {
+        "entity_type": "host",
+        "identifier": "workstation-01.corp.internal"
+      },
+      {
+        "entity_type": "user",
+        "identifier": "corp\\jdoe"
+      }
+    ],
+    "payload": {
+      "process_name": "powershell.exe",
+      "command_line": "powershell.exe -ExecutionPolicy Bypass -EncodedCommand Q2hhbmdlTWU...",
+      "parent_process": "explorer.exe",
+      "pid": 4812
+    },
+    "metadata": {
+      "agent_id": "edr-agent-9921",
+      "os_version": "Windows 11 Enterprise"
+    }
+  },
+  {
+    "event_id": "evt-1002",
+    "tenant_id": "tenant-default-001",
+    "source_layer": "network",
+    "event_type": "dns_query",
+    "observed_at": "2026-10-05T10:16:02.000Z",
+    "severity": "high",
+    "entities": [
+      {
+        "entity_type": "ip",
+        "identifier": "10.0.4.15"
+      },
+      {
+        "entity_type": "domain",
+        "identifier": "c2-command-node.badactor.org"
+      }
+    ],
+    "payload": {
+      "query_name": "c2-command-node.badactor.org",
+      "query_type": "A",
+      "resolved_ip": "185.220.101.4"
+    },
+    "metadata": {
+      "sensor_location": "edge-firewall-01"
+    }
+  },
+  {
+    "event_id": "evt-1003",
+    "tenant_id": "tenant-default-001",
+    "source_layer": "identity",
+    "event_type": "user_login",
+    "observed_at": "2026-10-05T10:18:45.000Z",
+    "severity": "critical",
+    "entities": [
+      {
+        "entity_type": "user",
+        "identifier": "corp\\admin_svc"
+      },
+      {
+        "entity_type": "host",
+        "identifier": "dc-primary.corp.internal"
+      }
+    ],
+    "payload": {
+      "authentication_package": "Kerberos",
+      "logon_type": 10,
+      "source_ip": "185.220.101.4",
+      "result": "SUCCESS"
+    },
+    "metadata": {
+      "idp_provider": "Active Directory Domain Controller"
+    }
+  },
+  {
+    "event_id": "evt-1004",
+    "tenant_id": "tenant-default-001",
+    "source_layer": "cloud",
+    "event_type": "cloud_api_call",
+    "observed_at": "2026-10-05T10:20:11.000Z",
+    "severity": "high",
+    "entities": [
+      {
+        "entity_type": "cloud_identity",
+        "identifier": "arn:aws:iam::123456789012:user/deployer"
+      }
+    ],
+    "payload": {
+      "event_name": "CreateAccessKey",
+      "service": "iam.amazonaws.com",
+      "user_agent": "aws-cli/2.11.0",
+      "response_elements": {
+        "accessKeyId": "AKIAIOSFODNN7EXAMPLE"
+      }
+    },
+    "metadata": {
+      "cloud_region": "us-east-1"
+    }
+  }
+]

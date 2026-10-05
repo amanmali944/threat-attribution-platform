@@ -1,0 +1,26 @@
+[
+  {
+    "id": "inc-9001",
+    "tenant_id": "tenant-default-001",
+    "title": "Cross-Layer Intrusion & Domain Controller Compromise",
+    "description": "Sequence of execution, C2 beaconing, and privileged access logon observed across Endpoint, Network, and Identity layers within 5 minutes.",
+    "severity": "critical",
+    "status": "investigating",
+    "assigned_to": "lead_analyst@corp.com",
+    "created_at": "2026-10-05T10:19:00.000Z",
+    "updated_at": "2026-10-05T10:20:00.000Z",
+    "alert_ids": ["alt-5001", "alt-5002", "alt-5003"]
+  },
+  {
+    "id": "inc-9002",
+    "tenant_id": "tenant-default-001",
+    "title": "Anomalous Cloud Persistence Key Creation",
+    "description": "IAM Access key generated under deployer role via non-standard user agent.",
+    "severity": "medium",
+    "status": "open",
+    "assigned_to": null,
+    "created_at": "2026-10-05T10:21:00.000Z",
+    "updated_at": "2026-10-05T10:21:00.000Z",
+    "alert_ids": []
+  }
+]

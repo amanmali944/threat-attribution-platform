@@ -1,0 +1,28 @@
+[
+  {
+    "id": "att-7001",
+    "tenant_id": "tenant-default-001",
+    "incident_id": "inc-9001",
+    "actor_name": "APT29 (Cozy Bear)",
+    "campaign": "Operation StellarParticle",
+    "confidence_score": 0.89,
+    "tactics_techniques": [
+      {
+        "tactic": "Execution",
+        "technique_id": "T1059.001",
+        "technique_name": "Command and Scripting Interpreter: PowerShell"
+      },
+      {
+        "tactic": "Command and Control",
+        "technique_id": "T1071.001",
+        "technique_name": "Application Layer Protocol: Web Protocols"
+      },
+      {
+        "tactic": "Lateral Movement",
+        "technique_id": "T1021.002",
+        "technique_name": "Remote Services: SMB/Windows Admin Shares"
+      }
+    ],
+    "created_at": "2026-10-05T10:22:00.000Z"
+  }
+]

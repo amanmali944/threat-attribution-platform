@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: threat_platform_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-threat_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-threat_secure_password_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-threat_platform}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-threat_user} -d ${POSTGRES_DB:-threat_platform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: threat_platform_backend
+    restart: always
+    environment:
+      POSTGRES_SERVER: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-threat_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-threat_secure_password_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-threat_platform}
+      SECRET_KEY: ${SECRET_KEY:-super-secret-platform-jwt-key-change-me}
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8000
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: threat_platform_frontend
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
