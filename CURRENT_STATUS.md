@@ -1,78 +1,114 @@
-# Current Status - Developer B (Platform & Presentation)
+# Platform Current Status — Developer B (Platform & Presentation)
 
-**Phase:** Prompt #2 FastAPI REST API Controllers & Fixture Endpoint Logic Complete  
-**Date:** October 06, 2026  
-**Status:** ALL V1 ENDPOINTS IMPLEMENTED & INTEGRATION TESTS PASSING (28/28)
-
----
-
-## 1. Accomplished Work (#2)
-
-### Complete API v1 Controller Implementation
-Implemented all REST API endpoints defined in `docs/API_CONTRACT.md` and Prompt #2 specifications with SQLAlchemy ORM sessions, multi-tenant scoping (`tenant_id`), pagination (`limit`, `offset`), and mock fixture fallback:
-
-1. **Telemetry Ingestion (`backend/app/api/v1/events.py`):**
-   - `POST /api/v1/events`: Ingests canonical telemetry, validates with Pydantic, persists to PostgreSQL DB (`events` table), automatically registers embedded entities in the `entities` table. Status: `201 Created`.
-   - `GET /api/v1/events`: Paginated, multi-tenant event query supporting `source_layer`, `event_type`, `start_time`, `end_time` filters with seamless fallback to `data/fixtures/events.json`.
-
-2. **Alert & Triage Routing (`backend/app/api/v1/alerts.py`):**
-   - `POST /api/v1/alerts`: Ingests detections with many-to-many event associations. Status: `201 Created`.
-   - `GET /api/v1/alerts`: List alerts with filtering by `tenant_id`, `detector` / `rule_id`, `technique`, `severity`, `status`. Falls back to `data/fixtures/alerts.json` on fresh DB.
-   - `GET /api/v1/alerts/{alert_id}`: Fetches individual alert details with evidence references (`evidence_refs` and `event_ids`). Returns `404` when not found.
-
-3. **Incident & Attribution Routing (`backend/app/api/v1/incidents.py`):**
-   - `POST /api/v1/incidents`: Creates correlated security incidents. Status: `201 Created`.
-   - `GET /api/v1/incidents`: List incidents with `tenant_id` scoping, pagination, and filtering by `status`, `severity`, and `risk_score` (via threat attribution joins or fixture scoring).
-   - `GET /api/v1/incidents/{incident_id}`: Fetch single incident record (DB or fixture fallback; `404` on missing).
-   - `PATCH /api/v1/incidents/{incident_id}`: Allows analysts to update incident triage status (`open`, `reviewed`, `dismissed`, `confirmed`, `investigating`, `closed`). **Appends an audit entry to the `audit_logs` table** capturing previous/new status, notes, and timestamp. Returns `422` on invalid status.
-   - `GET /api/v1/incidents/{incident_id}/timeline`: Generates a unified, chronological timeline of actions combining incident creation, triggered alerts, threat attributions, and analyst audit actions.
-   - `GET /api/v1/incidents/{incident_id}/graph`: Generates graph JSON topology payload with nodes, directed edges, identified `patient_zero` (initial entry point entity), and computed `blast_radius` (unique impacted entities breakdown).
-
-4. **Dashboard & Evaluation Routers (`backend/app/api/v1/dashboard.py`, `backend/app/api/v1/evaluation.py`):**
-   - `GET /api/v1/dashboard/summary`: Tenant-scoped metrics providing counts of total/open/reviewed/confirmed/dismissed incidents, risk severity distribution (`critical`, `high`, `medium`, `low`), alert volume breakdowns, and top threat actors.
-   - `GET /api/v1/evaluation/summary`: Model governance metrics returning per-class precision/recall/F1 across attack layers (endpoint execution, network C2, identity escalation, cloud persistence) alongside calibration stats (Brier score, ECE, max calibration error, AUC-ROC).
-
-5. **Entity Routing (`backend/app/api/v1/entities.py`):**
-   - `POST /api/v1/entities`: Entity registration endpoint.
-   - `GET /api/v1/entities`: Paginated entity query scoped by `tenant_id`, `entity_type`, and `identifier`, with fallback extraction from event telemetry fixtures.
-   - `GET /api/v1/entities/{entity_id}`: Individual entity lookup.
-
-6. **FastAPI Application Centralization (`backend/app/main.py`):**
-   - Configured all v1 routers under `/api/v1`, CORS middleware, database lifespan management, and health check (`GET /health`).
-
-7. **Integration Test Suite (`backend/tests/test_api_v1.py`):**
-   - 28 automated integration test cases passing cleanly under pytest:
-     - Verified mock fixture fallback logic on a fresh database.
-     - Verified Pydantic validation (422 status on missing required fields).
-     - Verified 404 error handling for missing alerts, incidents, and entities.
-     - Verified `AuditLog` table record persistence on `PATCH /incidents/{incident_id}`.
-     - Verified timeline and graph topology payloads with `patient_zero` and `blast_radius`.
+**Last Updated:** October 06, 2026  
+**Overall Status:** Phase 1 & Phase 2 (Tasks 2.1 & 2.2) COMPLETE — 32/32 INTEGRATION TESTS PASSING  
 
 ---
 
-## 2. Verification Matrix
+## 1. Executive Phase & Task Summary
 
-| Endpoint | Method | Tenant Scoped | Paginated | Mock Fixture Fallback | Tests Passing |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `/api/v1/events` | `POST` | Yes (Body) | N/A | N/A (Write) | Yes |
-| `/api/v1/events` | `GET` | Yes (Query) | Yes | Yes (`events.json`) | Yes |
-| `/api/v1/alerts` | `POST` | Yes (Body) | N/A | N/A (Write) | Yes |
-| `/api/v1/alerts` | `GET` | Yes (Query) | Yes | Yes (`alerts.json`) | Yes |
-| `/api/v1/alerts/{alert_id}` | `GET` | Optional | N/A | Yes (`alerts.json`) | Yes |
-| `/api/v1/incidents` | `POST` | Yes (Body) | N/A | N/A (Write) | Yes |
-| `/api/v1/incidents` | `GET` | Yes (Query) | Yes | Yes (`incidents.json`) | Yes |
-| `/api/v1/incidents/{incident_id}` | `GET` | Optional | N/A | Yes (`incidents.json`) | Yes |
-| `/api/v1/incidents/{incident_id}` | `PATCH`| Yes (Model) | N/A | Appends to AuditLog | Yes |
-| `/api/v1/incidents/{incident_id}/timeline` | `GET` | Optional | N/A | Yes (Multi-fixture) | Yes |
-| `/api/v1/incidents/{incident_id}/graph` | `GET` | Optional | N/A | Yes (Multi-fixture) | Yes |
-| `/api/v1/dashboard/summary` | `GET` | Yes (Query) | N/A | Yes (Multi-fixture) | Yes |
-| `/api/v1/evaluation/summary` | `GET` | Optional | N/A | Yes (Benchmark) | Yes |
-| `/api/v1/entities` | `GET` | Yes (Query) | Yes | Yes (`events.json`) | Yes |
-| `/api/v1/entities/{entity_id}` | `GET` | Optional | N/A | Yes (`events.json`) | Yes |
+| Phase / Task | Scope | Status | Test Coverage |
+| :--- | :--- | :--- | :--- |
+| **Phase 1: Platform Scaffold & Core Data Layer** | 7 ORM Models, Pydantic Contracts, Base Schemas, Docker Setup, Golden Fixtures | **COMPLETE** | 4 Unit / Schema Tests Passing |
+| **Phase 2 — Task 2.1: FastAPI REST Controllers** | API v1 Endpoints, Fixture Fallback Logic, Audit Logging, Graph Analytics | **COMPLETE** | 24 API Tests + 4 Base Tests Passing (28 Total) |
+| **Phase 2 — Task 2.2: Alembic Migrations & Seeding** | Baseline Schema Migrations (001), Idempotent Seeding, DB Tests | **COMPLETE** | 4 Migration & Seed Integration Tests Passing |
+| **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **32 / 32 Tests Passing (100%)** |
 
 ---
 
-## 3. Next Steps
+## 2. Detailed Breakdown: Database Schema & ORM Models
 
-- **Developer A Integration:** Developer A can plug in detection engines, rule evaluators, and TTP attribution pipelines by consuming ORM tables and writing correlated alerts/incidents.
-- **Frontend Dashboard:** Presentation layer can consume `/api/v1/dashboard/summary`, `/api/v1/incidents`, `/api/v1/incidents/{id}/timeline`, and `/api/v1/incidents/{id}/graph`.
+Canonical PostgreSQL relational schema v1.0 defined in `docs/DATABASE_SCHEMA.md` and managed via Alembic baseline migration `backend/alembic/versions/001_initial_schema.py`:
+
+| Table | Primary Key | Key Columns / Constraints | Multi-Tenant Index | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **`events`** | `id (VARCHAR(64))` | `tenant_id`, `source_layer`, `event_type`, `observed_at`, `payload (JSONB)`, `severity` | `ix_events_tenant_id`, `ix_events_observed_at`, `ix_events_tenant_observed` | Raw canonical telemetry events across Endpoint, Network, Identity, Cloud. |
+| **`entities`** | `id (VARCHAR(64))` | `tenant_id`, `entity_type`, `identifier`, `properties (JSONB)`, `first_seen`, `last_seen` | `ix_entities_tenant_id`, `ix_entities_tenant_identifier` | Tracked infrastructure & identity objects (hosts, users, IPs, domains). |
+| **`alerts`** | `id (VARCHAR(64))` | `tenant_id`, `rule_id`, `title`, `description`, `severity`, `status`, `observed_at` | `ix_alerts_tenant_id`, `ix_alerts_observed_at`, `ix_alerts_tenant_status` | Detections produced by rule engines and analytical detectors. |
+| **`event_alerts`** | `(event_id, alert_id)` | FK `events.id` (CASCADE), FK `alerts.id` (CASCADE) | N/A (Composite PK) | Many-to-many junction associating telemetry evidence with alerts. |
+| **`incidents`** | `id (VARCHAR(64))` | `tenant_id`, `title`, `description`, `severity`, `status`, `assigned_to`, `created_at` | `ix_incidents_tenant_id`, `ix_incidents_created_at` | Correlated multi-stage security incidents clustering related alerts. |
+| **`incident_alerts`** | `(incident_id, alert_id)` | FK `incidents.id` (CASCADE), FK `alerts.id` (CASCADE) | N/A (Composite PK) | Many-to-many junction clustering alerts into higher-order incidents. |
+| **`attributions`** | `id (VARCHAR(64))` | FK `incidents.id` (CASCADE), `actor_name`, `campaign`, `confidence_score`, `tactics_techniques (JSONB)` | `ix_attributions_tenant_id`, `ix_attributions_incident_id` | Threat actor correlation, campaign linkages, and MITRE ATT&CK techniques. |
+| **`users`** | `id (VARCHAR(64))` | `username (UNIQUE)`, `email (UNIQUE)`, `hashed_password`, `role`, `is_active` | `ix_users_tenant_id` | Platform operators, SOC analysts, and administrators. |
+| **`audit_logs`** | `id (VARCHAR(64))` | FK `users.id` (NULLABLE), `action`, `resource`, `details (JSONB)`, `created_at` | `ix_audit_logs_tenant_id`, `ix_audit_logs_created_at` | Immutable forensic audit trail capturing status transitions & analyst updates. |
+
+---
+
+## 3. Detailed Breakdown: FastAPI v1 REST API Controllers
+
+Implemented across `backend/app/api/v1/` with Pydantic validation, multi-tenant query isolation, pagination, and automated fallback to golden fixtures (`data/fixtures/`):
+
+| Method | Endpoint | Tenant Scoped | Pagination | Golden Fixture Fallback | Status | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/events` | Yes (Body) | N/A | Write Path | `201 Created` | Ingests telemetry, persists event row, and registers discovered entities. |
+| `GET` | `/api/v1/events` | Yes (Query) | `limit`, `offset` | `events.json` | `200 OK` | Queries events filtered by layer, event type, and time bounds. |
+| `POST` | `/api/v1/alerts` | Yes (Body) | N/A | Write Path | `201 Created` | Ingests detection alerts with M2M event evidence associations. |
+| `GET` | `/api/v1/alerts` | Yes (Query) | `limit`, `offset` | `alerts.json` | `200 OK` | Lists alerts filtered by tenant, rule, severity, status, or technique. |
+| `GET` | `/api/v1/alerts/{id}` | Optional | N/A | `alerts.json` | `200 / 404` | Retrieves single alert details including evidence references. |
+| `POST` | `/api/v1/incidents` | Yes (Body) | N/A | Write Path | `201 Created` | Ingests correlated incidents with linked alert IDs. |
+| `GET` | `/api/v1/incidents` | Yes (Query) | `limit`, `offset` | `incidents.json` | `200 OK` | Lists incidents filtered by status, severity, and confidence score. |
+| `GET` | `/api/v1/incidents/{id}` | Optional | N/A | `incidents.json` | `200 / 404` | Fetches single incident record with associated alerts. |
+| `PATCH` | `/api/v1/incidents/{id}`| Yes (Model) | N/A | DB Audit Write | `200 / 422` | Updates triage status (`open`, `reviewed`, `confirmed`, etc.) & writes audit trail. |
+| `GET` | `/api/v1/incidents/{id}/timeline` | Optional | N/A | Multi-Fixture | `200 / 404` | Chronological event timeline (alerts, actions, and audit logs). |
+| `GET` | `/api/v1/incidents/{id}/graph` | Optional | N/A | Multi-Fixture | `200 / 404` | Generates graph topology, identifies `patient_zero`, computes `blast_radius`. |
+| `GET` | `/api/v1/dashboard/summary` | Yes (Query) | N/A | Multi-Fixture | `200 OK` | Aggregates incident counts, severity distribution, and top threat actors. |
+| `GET` | `/api/v1/evaluation/summary` | Optional | N/A | Benchmark Metrics| `200 OK` | Per-layer precision, recall, F1, calibration stats (ECE, Brier, AUC-ROC). |
+| `POST` | `/api/v1/entities` | Yes (Body) | N/A | Write Path | `201 Created` | Registers or updates tracked infrastructure/identity entity. |
+| `GET` | `/api/v1/entities` | Yes (Query) | `limit`, `offset` | `events.json` | `200 OK` | Queries entities by tenant, type, or identifier. |
+| `GET` | `/api/v1/entities/{id}` | Optional | N/A | `events.json` | `200 / 404` | Fetches individual entity record and properties. |
+| `GET` | `/health` | No | N/A | N/A | `200 OK` | Platform health check and service readiness. |
+
+---
+
+## 4. Alembic Migration & Seeding Verification (Task 2.2)
+
+1. **Alembic Infrastructure (`backend/alembic.ini`, `backend/alembic/env.py`):**
+   - Automatically registers all 7 ORM models and 2 association tables.
+   - Reads `DATABASE_URL` dynamically from environment with graceful fallbacks.
+   - Implements `render_as_batch=is_sqlite` enabling seamless SQLite in-memory and local development testing alongside PostgreSQL.
+
+2. **Baseline Migration (`backend/alembic/versions/001_initial_schema.py`):**
+   - Version `001_initial_schema` covers full table DDL, indices, and reverse `downgrade()` drop scripts.
+   - Verified clean upgrade -> downgrade -> re-upgrade lifecycle.
+
+3. **Idempotent Seeding Engine (`backend/app/db/seed.py`):**
+   - Ingests canonical golden fixtures: `events.json`, `alerts.json`, `incidents.json`, `attribution.json`.
+   - Generates deterministic SHA256 entity identifiers (`ent-{entity_type}-{hash}`).
+   - Safely updates `first_seen` and `last_seen` timestamps with offset-aware normalization.
+   - Fully idempotent: multiple consecutive executions result in 0 errors and skip existing records cleanly (`events_skipped: 4`, `entities_skipped: 7`, `alerts_skipped: 3`, `incidents_skipped: 2`, `attributions_skipped: 1`, `users_skipped: 1`).
+   - Adaptive connection resolution: respects `DATABASE_URL`, connects to live PostgreSQL, or falls back to local SQLite without crashing.
+
+---
+
+## 5. Automated Verification Matrix
+
+```
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-9.1.1, pluggy-1.6.0
+collected 32 items
+
+backend/tests/test_api_v1.py ........................                    [ 75%]
+backend/tests/test_main.py ..                                            [ 81%]
+backend/tests/test_migrations.py ....                                    [ 93%]
+backend/tests/test_models.py .                                           [ 96%]
+backend/tests/test_schemas.py .                                          [100%]
+
+======================= 32 passed, 52 warnings in 4.40s =======================
+```
+
+- **API v1 Tests (`test_api_v1.py`):** 24 passed
+- **App Shell Tests (`test_main.py`):** 2 passed
+- **Model Relationship Tests (`test_models.py`):** 1 passed
+- **Pydantic Schema Tests (`test_schemas.py`):** 1 passed
+- **Migration & Seed Tests (`test_migrations.py`):** 4 passed
+  * `test_alembic_migration_upgrade_and_downgrade` (PASSED)
+  * `test_seed_database_fixture_ingestion` (PASSED)
+  * `test_seed_database_idempotency` (PASSED)
+  * `test_seed_main_cli_execution` (PASSED)
+
+---
+
+## 6. Next Steps
+
+- **Developer A Integration:** Detection engine and attribution models can consume live database sessions or offline fixtures directly.
+- **Frontend Presentation:** UI components can connect to live FastAPI endpoints backed by seeded database entities and real-time query endpoints.
