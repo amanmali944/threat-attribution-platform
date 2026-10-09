@@ -1,19 +1,22 @@
 # Platform Current Status — Developer B (Platform & Presentation)
 
 **Last Updated:** October 09, 2026  
-**Overall Status:** Phase 1, Phase 2, & Phase 3 (Authentication, JWT Token Issuance & RBAC Middleware) COMPLETE — 51/51 INTEGRATION TESTS PASSING  
+**Overall Status:** Database File Alignment & Persistent SQLite Fallback Fix COMPLETE — 59/59 INTEGRATION & AUDIT TESTS PASSING (100%), PERSISTENT LOCAL DB (`threat_platform.db`) VERIFIED & FRONTEND PRODUCTION BUILD VERIFIED (0 LINT ERRORS/WARNINGS)
 
 ---
 
 ## 1. Executive Phase & Task Summary
 
-| Phase / Task | Scope | Status | Test Coverage |
+| Phase / Task | Scope | Status | Test & Build Coverage |
 | :--- | :--- | :--- | :--- |
 | **Phase 1: Platform Scaffold & Core Data Layer** | 7 ORM Models, Pydantic Contracts, Base Schemas, Docker Setup, Golden Fixtures | **COMPLETE** | 4 Unit / Schema Tests Passing |
 | **Phase 2 — Task 2.1: FastAPI REST Controllers** | API v1 Endpoints, Fixture Fallback Logic, Audit Logging, Graph Analytics | **COMPLETE** | 24 API Tests + 4 Base Tests Passing (28 Total) |
 | **Phase 2 — Task 2.2: Alembic Migrations & Seeding** | Baseline Schema Migrations (001), Idempotent Seeding, DB Tests | **COMPLETE** | 4 Migration & Seed Integration Tests Passing |
 | **Phase 3 — Task 3.1: Auth, JWT & RBAC Middleware** | Bcrypt Hashing, PyJWT Issuance & Verification, OAuth2 Login, `/auth/me`, RBAC Guards, Multi-Tenant Scoping | **COMPLETE** | 19 Unit & Integration Tests Passing |
-| **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **51 / 51 Tests Passing (100%)** |
+| **Route & DB Audit Fix** | Fixed Auth Router duplicate `/auth` prefix in `main.py`, Graceful DB fallback, Route Contract Audit Suite | **COMPLETE** | 8 Route & DB Resilience Tests Passing |
+| **Database File Alignment Fix** | Persistent SQLite DB (`threat_platform.db`), `backend/.env`, Seed & App Data Sharing, UI Quick-Fill 200 OK | **COMPLETE** | 59/59 Tests Passing & Live Login Verified (HTTP 200) |
+| **Phase 4 — Task 4.1: React + TS SOC Frontend Scaffolding** | Vite + React 19 + TypeScript + Tailwind v4, Axios Client + JWT Interceptors, AuthContext, Protected Routes, AppShell & Cyber SOC Pages | **COMPLETE** | `oxlint` (0 Errors / 0 Warnings) & `tsc -b && vite build` (Clean Build) |
+| **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **59 / 59 Tests Passing (100%)** |
 
 ---
 
@@ -65,23 +68,52 @@ Implemented across `backend/app/api/v1/` with Pydantic validation, multi-tenant 
 
 ---
 
-## 4. Authentication, JWT & RBAC Implementation (Task 3.1)
+## 4. Frontend Architecture & Presentation Layer (Phase 4 — Task 4.1)
 
-1. **Security Infrastructure (`backend/app/core/security.py`):**
-   - Password hashing and verification powered by `passlib.context.CryptContext` utilizing `bcrypt`.
-   - JWT encoding via `create_access_token` and decoding via `decode_access_token` with configurable expiration (`ACCESS_TOKEN_EXPIRE_MINUTES`).
-   - Signing key and algorithm isolated from environment settings (`SECRET_KEY`, `ALGORITHM`).
-   - Expiration validation strictly enforced, raising `jwt.ExpiredSignatureError`.
+A complete, production-ready React + TypeScript frontend scaffolded with Vite and Tailwind CSS v4, built to deliver an immersive, cyber-themed SOC analyst experience:
 
-2. **Security Dependencies (`backend/app/api/deps.py`):**
-   - `get_current_user`: Extracts token from `Authorization: Bearer <token>`, validates signature and expiration, and retrieves `User` ORM object (with golden fixture fallback for offline/development testing). Returns HTTP 401 Unauthorized upon invalid or expired tokens.
-   - `require_role(required_roles)`: Dependency factory generating composable guards verifying `current_user.role`. Returns HTTP 403 Forbidden when insufficient permissions exist.
-   - `get_current_tenant`: Resolves `tenant_id` from the authenticated user claim to ensure strict multi-tenant data boundaries.
+### 4.1 Technology Stack & Tooling
+- **Build Engine & Framework:** Vite 8 + React 19 + TypeScript (strict mode enabled).
+- **Styling & Theme:** Tailwind CSS v4 + `@tailwindcss/vite` plugin with custom SOC color tokens (`--color-soc-bg`, `--color-neon-cyan`, `--color-neon-green`, `--color-neon-red`, `--color-neon-purple`, `--color-soc-elevated`).
+- **Icons & Visual Language:** `lucide-react` modern cyber security icons with subtle glows and glassmorphism.
+- **Routing:** `react-router-dom` v7 with declarative route hierarchy and authentication route guards.
 
-3. **Authentication Endpoints (`backend/app/api/v1/auth.py`):**
-   - `POST /api/v1/auth/login`: Accepts OAuth2 password form (`application/x-www-form-urlencoded`) as well as JSON (`application/json`), verifies bcrypt hashes or seed credentials, and returns access token + token type.
-   - `GET /api/v1/auth/me`: Authenticated endpoint returning user profile and role details.
-   - Registered on the main application in `backend/app/main.py`.
+### 4.2 Core Architecture & Component Tree
+```
+frontend/src/
+├── main.tsx                           # StrictMode app bootstrap mounting App.tsx
+├── App.tsx                            # Root application with AuthProvider & BrowserRouter
+├── index.css                          # Tailwind v4 import, SOC theme tokens & glass cards
+├── context/
+│   ├── auth-context-definition.ts     # AuthState, AuthContextValue types & createContext
+│   ├── AuthContext.tsx                # AuthProvider with persistent session hydration & /auth/me verification
+│   └── useAuth.ts                     # useAuth hook separated for React Fast Refresh purity
+├── services/
+│   └── api.ts                         # Axios instance with Bearer JWT interceptor & typed endpoints
+├── router/
+│   └── ProtectedRoute.tsx             # Guard redirecting unauthenticated users to /login
+├── components/
+│   └── layout/
+│       ├── AppShell.tsx               # Main layout container hosting TopBar, Sidebar, and Outlet
+│       ├── TopBar.tsx                 # Header with platform title, SOC Live pill, tenant badge & logout
+│       └── Sidebar.tsx                # Cyber SOC navigation with active glow links & engine metadata
+└── pages/
+    ├── LoginPage.tsx                  # SOC login gateway with quick-fill test accounts (admin, analyst, viewer)
+    ├── DashboardPage.tsx              # Operations overview with KPI metrics & MITRE threat actor rankings
+    ├── AlertsPage.tsx                 # Analytical rule detections table with search & severity filters
+    ├── IncidentsPage.tsx              # Correlated multi-stage attack cases with status filter & details
+    └── HealthPage.tsx                 # Diagnostic telemetry probe & subsystem latency indicators
+```
+
+### 4.3 Centralized API Client & JWT Flow (`frontend/src/services/api.ts`)
+- Configured with environment-based `VITE_API_BASE_URL` (defaulting to `/api/v1` with Vite proxy forwarding `/api` to `http://localhost:8000`).
+- **Request Interceptor:** Automatically injects `Authorization: Bearer <access_token>` from `localStorage`.
+- **Response Interceptor:** Detects `401 Unauthorized`, clears stale tokens from `localStorage`, and cleanly redirects to `/login`.
+- **Typed APIs:** Includes type-safe methods for `authApi.login()`, `authApi.me()`, `dashboardApi.summary()`, `alertsApi.list()`, and `incidentsApi.list()`.
+
+### 4.4 Verification & Build Health
+- **Linting (`oxlint`):** `0 warnings, 0 errors` across all 16 source files.
+- **TypeScript & Production Build (`tsc -b && vite build`):** Builds in <1s generating optimized production bundle in `frontend/dist/`.
 
 ---
 
@@ -90,49 +122,47 @@ Implemented across `backend/app/api/v1/` with Pydantic validation, multi-tenant 
 ```
 ============================= test session starts =============================
 platform win32 -- Python 3.13.3, pytest-9.1.1, pluggy-1.6.0
-rootdir: C:\Users\Asus\Desktop\threat-attribution-platform\backend
+rootdir: C:\Users\Asus\Desktop\threat-attribution-platform
 plugins: anyio-4.9.0
-collected 51 items
+collected 59 items
 
-backend/tests/test_api_v1.py ........................                    [ 47%]
-backend/tests/test_auth.py ...................                           [ 84%]
-backend/tests/test_main.py ..                                            [ 88%]
+backend/tests/test_api_v1.py ........................                    [ 40%]
+backend/tests/test_auth.py ...................                           [ 72%]
+backend/tests/test_endpoints_audit.py ........                           [ 86%]
+backend/tests/test_main.py ..                                            [ 89%]
 backend/tests/test_migrations.py ....                                    [ 96%]
 backend/tests/test_models.py .                                           [ 98%]
 backend/tests/test_schemas.py .                                          [100%]
 
-======================= 51 passed, 52 warnings in 6.70s =======================
+======================= 59 passed, 52 warnings in 6.96s =======================
+
+============================= frontend build starts =============================
+> frontend@0.0.0 lint
+> oxlint
+Found 0 warnings and 0 errors.
+
+> frontend@0.0.0 build
+> tsc -b && vite build
+✓ 1976 modules transformed.
+dist/index.html                   1.11 kB │ gzip:   0.59 kB
+dist/assets/index-DgegU-_J.css   28.87 kB │ gzip:   6.24 kB
+dist/assets/index-CbQlg_zv.js   360.40 kB │ gzip: 112.63 kB
+✓ built in 899ms
 ```
 
 - **Authentication & RBAC Tests (`test_auth.py`):** 19 passed
-  * `test_password_hashing_and_verification` (PASSED)
-  * `test_jwt_create_and_decode_valid` (PASSED)
-  * `test_jwt_token_expiration_handling` (PASSED)
-  * `test_jwt_invalid_and_tampered_token` (PASSED)
-  * `test_login_success_form_data` (PASSED)
-  * `test_login_success_json_data` (PASSED)
-  * `test_login_invalid_password` (PASSED)
-  * `test_login_unknown_user` (PASSED)
-  * `test_login_inactive_user` (PASSED)
-  * `test_auth_me_unauthenticated` (PASSED)
-  * `test_auth_me_invalid_token` (PASSED)
-  * `test_auth_me_expired_token` (PASSED)
-  * `test_auth_me_authenticated_success` (PASSED)
-  * `test_rbac_admin_allowed_on_admin_endpoint` (PASSED)
-  * `test_rbac_analyst_forbidden_on_admin_endpoint` (PASSED)
-  * `test_rbac_viewer_forbidden_on_admin_endpoint` (PASSED)
-  * `test_require_role_dependency_factory_direct` (PASSED)
-  * `test_tenant_scoping_dependency` (PASSED)
-  * `test_custom_user_end_to_end` (PASSED)
+- **Endpoint Connectivity Audit Tests (`test_endpoints_audit.py`):** 8 passed (Health, Auth Login/Me, Events, Alerts, Incidents, Dashboard Summary, DB Resilience)
 - **API v1 Tests (`test_api_v1.py`):** 24 passed
 - **App Shell Tests (`test_main.py`):** 2 passed
 - **Model Relationship Tests (`test_models.py`):** 1 passed
 - **Pydantic Schema Tests (`test_schemas.py`):** 1 passed
 - **Migration & Seed Tests (`test_migrations.py`):** 4 passed
+- **Total Backend Test Suite:** 59 / 59 passed (100%)
+- **Frontend Code Quality & Production Bundle:** 100% Passing (0 lint warnings, clean build)
 
 ---
 
 ## 6. Next Steps
 
 - **Developer A Integration:** Detection engine and attribution models can consume live database sessions or offline fixtures directly.
-- **Frontend Presentation:** UI components can authenticate through `/api/v1/auth/login`, store the JWT token, and communicate with role-protected endpoints.
+- **Frontend Presentation:** The frontend SOC Console is fully scaffolded, styled, and ready for end-to-end integration and visualization widgets.
