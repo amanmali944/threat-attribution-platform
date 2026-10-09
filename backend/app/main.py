@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import init_db
+from app.api.v1.auth import router as auth_router
 from app.api.v1.events import router as events_router
 from app.api.v1.alerts import router as alerts_router
 from app.api.v1.incidents import router as incidents_router
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 
 # Register all API v1 routers
+app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(events_router, prefix=settings.API_V1_STR)
 app.include_router(alerts_router, prefix=settings.API_V1_STR)
 app.include_router(incidents_router, prefix=settings.API_V1_STR)

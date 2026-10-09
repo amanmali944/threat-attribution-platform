@@ -1,7 +1,7 @@
 # Platform Current Status — Developer B (Platform & Presentation)
 
-**Last Updated:** October 06, 2026  
-**Overall Status:** Phase 1 & Phase 2 (Tasks 2.1 & 2.2) COMPLETE — 32/32 INTEGRATION TESTS PASSING  
+**Last Updated:** October 09, 2026  
+**Overall Status:** Phase 1, Phase 2, & Phase 3 (Authentication, JWT Token Issuance & RBAC Middleware) COMPLETE — 51/51 INTEGRATION TESTS PASSING  
 
 ---
 
@@ -12,7 +12,8 @@
 | **Phase 1: Platform Scaffold & Core Data Layer** | 7 ORM Models, Pydantic Contracts, Base Schemas, Docker Setup, Golden Fixtures | **COMPLETE** | 4 Unit / Schema Tests Passing |
 | **Phase 2 — Task 2.1: FastAPI REST Controllers** | API v1 Endpoints, Fixture Fallback Logic, Audit Logging, Graph Analytics | **COMPLETE** | 24 API Tests + 4 Base Tests Passing (28 Total) |
 | **Phase 2 — Task 2.2: Alembic Migrations & Seeding** | Baseline Schema Migrations (001), Idempotent Seeding, DB Tests | **COMPLETE** | 4 Migration & Seed Integration Tests Passing |
-| **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **32 / 32 Tests Passing (100%)** |
+| **Phase 3 — Task 3.1: Auth, JWT & RBAC Middleware** | Bcrypt Hashing, PyJWT Issuance & Verification, OAuth2 Login, `/auth/me`, RBAC Guards, Multi-Tenant Scoping | **COMPLETE** | 19 Unit & Integration Tests Passing |
+| **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **51 / 51 Tests Passing (100%)** |
 
 ---
 
@@ -34,49 +35,53 @@ Canonical PostgreSQL relational schema v1.0 defined in `docs/DATABASE_SCHEMA.md`
 
 ---
 
-## 3. Detailed Breakdown: FastAPI v1 REST API Controllers
+## 3. Detailed Breakdown: FastAPI v1 REST API Controllers & Security Endpoints
 
-Implemented across `backend/app/api/v1/` with Pydantic validation, multi-tenant query isolation, pagination, and automated fallback to golden fixtures (`data/fixtures/`):
+Implemented across `backend/app/api/v1/` with Pydantic validation, multi-tenant query isolation, pagination, automated fallback to golden fixtures (`data/fixtures/`), and JWT/RBAC security:
 
-| Method | Endpoint | Tenant Scoped | Pagination | Golden Fixture Fallback | Status | Description |
+| Method | Endpoint | Tenant Scoped | Pagination | Auth / RBAC Guard | Status | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/events` | Yes (Body) | N/A | Write Path | `201 Created` | Ingests telemetry, persists event row, and registers discovered entities. |
-| `GET` | `/api/v1/events` | Yes (Query) | `limit`, `offset` | `events.json` | `200 OK` | Queries events filtered by layer, event type, and time bounds. |
-| `POST` | `/api/v1/alerts` | Yes (Body) | N/A | Write Path | `201 Created` | Ingests detection alerts with M2M event evidence associations. |
-| `GET` | `/api/v1/alerts` | Yes (Query) | `limit`, `offset` | `alerts.json` | `200 OK` | Lists alerts filtered by tenant, rule, severity, status, or technique. |
-| `GET` | `/api/v1/alerts/{id}` | Optional | N/A | `alerts.json` | `200 / 404` | Retrieves single alert details including evidence references. |
-| `POST` | `/api/v1/incidents` | Yes (Body) | N/A | Write Path | `201 Created` | Ingests correlated incidents with linked alert IDs. |
-| `GET` | `/api/v1/incidents` | Yes (Query) | `limit`, `offset` | `incidents.json` | `200 OK` | Lists incidents filtered by status, severity, and confidence score. |
-| `GET` | `/api/v1/incidents/{id}` | Optional | N/A | `incidents.json` | `200 / 404` | Fetches single incident record with associated alerts. |
-| `PATCH` | `/api/v1/incidents/{id}`| Yes (Model) | N/A | DB Audit Write | `200 / 422` | Updates triage status (`open`, `reviewed`, `confirmed`, etc.) & writes audit trail. |
-| `GET` | `/api/v1/incidents/{id}/timeline` | Optional | N/A | Multi-Fixture | `200 / 404` | Chronological event timeline (alerts, actions, and audit logs). |
-| `GET` | `/api/v1/incidents/{id}/graph` | Optional | N/A | Multi-Fixture | `200 / 404` | Generates graph topology, identifies `patient_zero`, computes `blast_radius`. |
-| `GET` | `/api/v1/dashboard/summary` | Yes (Query) | N/A | Multi-Fixture | `200 OK` | Aggregates incident counts, severity distribution, and top threat actors. |
-| `GET` | `/api/v1/evaluation/summary` | Optional | N/A | Benchmark Metrics| `200 OK` | Per-layer precision, recall, F1, calibration stats (ECE, Brier, AUC-ROC). |
-| `POST` | `/api/v1/entities` | Yes (Body) | N/A | Write Path | `201 Created` | Registers or updates tracked infrastructure/identity entity. |
-| `GET` | `/api/v1/entities` | Yes (Query) | `limit`, `offset` | `events.json` | `200 OK` | Queries entities by tenant, type, or identifier. |
-| `GET` | `/api/v1/entities/{id}` | Optional | N/A | `events.json` | `200 / 404` | Fetches individual entity record and properties. |
-| `GET` | `/health` | No | N/A | N/A | `200 OK` | Platform health check and service readiness. |
+| `POST` | `/api/v1/auth/login` | No (Auth Endpoint) | N/A | Public (OAuth2 Form / JSON) | `200 / 401` | Authenticates username/password, verifies bcrypt/fixture, returns JWT. |
+| `GET` | `/api/v1/auth/me` | Yes (User Claim) | N/A | `get_current_user` | `200 / 401` | Returns profile & role claims of the authenticated user. |
+| `GET` | `/api/v1/auth/tenant` | Yes (Extracted) | N/A | `get_current_tenant` | `200 / 401` | Returns tenant ID resolved from user JWT context. |
+| `GET` | `/api/v1/auth/admin-only` | Yes (User Claim) | N/A | `require_role(["admin"])` | `200 / 403` | Verifies administrative RBAC access control. |
+| `POST` | `/api/v1/events` | Yes (Body) | N/A | Open / Fixture Fallback | `201 Created` | Ingests telemetry, persists event row, and registers discovered entities. |
+| `GET` | `/api/v1/events` | Yes (Query) | `limit`, `offset` | Open / Fixture Fallback | `200 OK` | Queries events filtered by layer, event type, and time bounds. |
+| `POST` | `/api/v1/alerts` | Yes (Body) | N/A | Open / Fixture Fallback | `201 Created` | Ingests detection alerts with M2M event evidence associations. |
+| `GET` | `/api/v1/alerts` | Yes (Query) | `limit`, `offset` | Open / Fixture Fallback | `200 OK` | Lists alerts filtered by tenant, rule, severity, status, or technique. |
+| `GET` | `/api/v1/alerts/{id}` | Optional | N/A | Open / Fixture Fallback | `200 / 404` | Retrieves single alert details including evidence references. |
+| `POST` | `/api/v1/incidents` | Yes (Body) | N/A | Open / Fixture Fallback | `201 Created` | Ingests correlated incidents with linked alert IDs. |
+| `GET` | `/api/v1/incidents` | Yes (Query) | `limit`, `offset` | Open / Fixture Fallback | `200 OK` | Lists incidents filtered by status, severity, and confidence score. |
+| `GET` | `/api/v1/incidents/{id}` | Optional | N/A | Open / Fixture Fallback | `200 / 404` | Fetches single incident record with associated alerts. |
+| `PATCH` | `/api/v1/incidents/{id}`| Yes (Model) | N/A | Open / Fixture Fallback | `200 / 422` | Updates triage status (`open`, `reviewed`, `confirmed`, etc.) & writes audit trail. |
+| `GET` | `/api/v1/incidents/{id}/timeline` | Optional | N/A | Open / Fixture Fallback | `200 / 404` | Chronological event timeline (alerts, actions, and audit logs). |
+| `GET` | `/api/v1/incidents/{id}/graph` | Optional | N/A | Open / Fixture Fallback | `200 / 404` | Generates graph topology, identifies `patient_zero`, computes `blast_radius`. |
+| `GET` | `/api/v1/dashboard/summary` | Yes (Query) | N/A | Open / Fixture Fallback | `200 OK` | Aggregates incident counts, severity distribution, and top threat actors. |
+| `GET` | `/api/v1/evaluation/summary` | Optional | N/A | Open / Fixture Fallback | `200 OK` | Per-layer precision, recall, F1, calibration stats (ECE, Brier, AUC-ROC). |
+| `POST` | `/api/v1/entities` | Yes (Body) | N/A | Open / Fixture Fallback | `201 Created` | Registers or updates tracked infrastructure/identity entity. |
+| `GET` | `/api/v1/entities` | Yes (Query) | `limit`, `offset` | Open / Fixture Fallback | `200 OK` | Queries entities by tenant, type, or identifier. |
+| `GET` | `/api/v1/entities/{id}` | Optional | N/A | Open / Fixture Fallback | `200 / 404` | Fetches individual entity record and properties. |
+| `GET` | `/health` | No | N/A | Open | `200 OK` | Platform health check and service readiness. |
 
 ---
 
-## 4. Alembic Migration & Seeding Verification (Task 2.2)
+## 4. Authentication, JWT & RBAC Implementation (Task 3.1)
 
-1. **Alembic Infrastructure (`backend/alembic.ini`, `backend/alembic/env.py`):**
-   - Automatically registers all 7 ORM models and 2 association tables.
-   - Reads `DATABASE_URL` dynamically from environment with graceful fallbacks.
-   - Implements `render_as_batch=is_sqlite` enabling seamless SQLite in-memory and local development testing alongside PostgreSQL.
+1. **Security Infrastructure (`backend/app/core/security.py`):**
+   - Password hashing and verification powered by `passlib.context.CryptContext` utilizing `bcrypt`.
+   - JWT encoding via `create_access_token` and decoding via `decode_access_token` with configurable expiration (`ACCESS_TOKEN_EXPIRE_MINUTES`).
+   - Signing key and algorithm isolated from environment settings (`SECRET_KEY`, `ALGORITHM`).
+   - Expiration validation strictly enforced, raising `jwt.ExpiredSignatureError`.
 
-2. **Baseline Migration (`backend/alembic/versions/001_initial_schema.py`):**
-   - Version `001_initial_schema` covers full table DDL, indices, and reverse `downgrade()` drop scripts.
-   - Verified clean upgrade -> downgrade -> re-upgrade lifecycle.
+2. **Security Dependencies (`backend/app/api/deps.py`):**
+   - `get_current_user`: Extracts token from `Authorization: Bearer <token>`, validates signature and expiration, and retrieves `User` ORM object (with golden fixture fallback for offline/development testing). Returns HTTP 401 Unauthorized upon invalid or expired tokens.
+   - `require_role(required_roles)`: Dependency factory generating composable guards verifying `current_user.role`. Returns HTTP 403 Forbidden when insufficient permissions exist.
+   - `get_current_tenant`: Resolves `tenant_id` from the authenticated user claim to ensure strict multi-tenant data boundaries.
 
-3. **Idempotent Seeding Engine (`backend/app/db/seed.py`):**
-   - Ingests canonical golden fixtures: `events.json`, `alerts.json`, `incidents.json`, `attribution.json`.
-   - Generates deterministic SHA256 entity identifiers (`ent-{entity_type}-{hash}`).
-   - Safely updates `first_seen` and `last_seen` timestamps with offset-aware normalization.
-   - Fully idempotent: multiple consecutive executions result in 0 errors and skip existing records cleanly (`events_skipped: 4`, `entities_skipped: 7`, `alerts_skipped: 3`, `incidents_skipped: 2`, `attributions_skipped: 1`, `users_skipped: 1`).
-   - Adaptive connection resolution: respects `DATABASE_URL`, connects to live PostgreSQL, or falls back to local SQLite without crashing.
+3. **Authentication Endpoints (`backend/app/api/v1/auth.py`):**
+   - `POST /api/v1/auth/login`: Accepts OAuth2 password form (`application/x-www-form-urlencoded`) as well as JSON (`application/json`), verifies bcrypt hashes or seed credentials, and returns access token + token type.
+   - `GET /api/v1/auth/me`: Authenticated endpoint returning user profile and role details.
+   - Registered on the main application in `backend/app/main.py`.
 
 ---
 
@@ -85,30 +90,49 @@ Implemented across `backend/app/api/v1/` with Pydantic validation, multi-tenant 
 ```
 ============================= test session starts =============================
 platform win32 -- Python 3.13.3, pytest-9.1.1, pluggy-1.6.0
-collected 32 items
+rootdir: C:\Users\Asus\Desktop\threat-attribution-platform\backend
+plugins: anyio-4.9.0
+collected 51 items
 
-backend/tests/test_api_v1.py ........................                    [ 75%]
-backend/tests/test_main.py ..                                            [ 81%]
-backend/tests/test_migrations.py ....                                    [ 93%]
-backend/tests/test_models.py .                                           [ 96%]
+backend/tests/test_api_v1.py ........................                    [ 47%]
+backend/tests/test_auth.py ...................                           [ 84%]
+backend/tests/test_main.py ..                                            [ 88%]
+backend/tests/test_migrations.py ....                                    [ 96%]
+backend/tests/test_models.py .                                           [ 98%]
 backend/tests/test_schemas.py .                                          [100%]
 
-======================= 32 passed, 52 warnings in 4.40s =======================
+======================= 51 passed, 52 warnings in 6.70s =======================
 ```
 
+- **Authentication & RBAC Tests (`test_auth.py`):** 19 passed
+  * `test_password_hashing_and_verification` (PASSED)
+  * `test_jwt_create_and_decode_valid` (PASSED)
+  * `test_jwt_token_expiration_handling` (PASSED)
+  * `test_jwt_invalid_and_tampered_token` (PASSED)
+  * `test_login_success_form_data` (PASSED)
+  * `test_login_success_json_data` (PASSED)
+  * `test_login_invalid_password` (PASSED)
+  * `test_login_unknown_user` (PASSED)
+  * `test_login_inactive_user` (PASSED)
+  * `test_auth_me_unauthenticated` (PASSED)
+  * `test_auth_me_invalid_token` (PASSED)
+  * `test_auth_me_expired_token` (PASSED)
+  * `test_auth_me_authenticated_success` (PASSED)
+  * `test_rbac_admin_allowed_on_admin_endpoint` (PASSED)
+  * `test_rbac_analyst_forbidden_on_admin_endpoint` (PASSED)
+  * `test_rbac_viewer_forbidden_on_admin_endpoint` (PASSED)
+  * `test_require_role_dependency_factory_direct` (PASSED)
+  * `test_tenant_scoping_dependency` (PASSED)
+  * `test_custom_user_end_to_end` (PASSED)
 - **API v1 Tests (`test_api_v1.py`):** 24 passed
 - **App Shell Tests (`test_main.py`):** 2 passed
 - **Model Relationship Tests (`test_models.py`):** 1 passed
 - **Pydantic Schema Tests (`test_schemas.py`):** 1 passed
 - **Migration & Seed Tests (`test_migrations.py`):** 4 passed
-  * `test_alembic_migration_upgrade_and_downgrade` (PASSED)
-  * `test_seed_database_fixture_ingestion` (PASSED)
-  * `test_seed_database_idempotency` (PASSED)
-  * `test_seed_main_cli_execution` (PASSED)
 
 ---
 
 ## 6. Next Steps
 
 - **Developer A Integration:** Detection engine and attribution models can consume live database sessions or offline fixtures directly.
-- **Frontend Presentation:** UI components can connect to live FastAPI endpoints backed by seeded database entities and real-time query endpoints.
+- **Frontend Presentation:** UI components can authenticate through `/api/v1/auth/login`, store the JWT token, and communicate with role-protected endpoints.
