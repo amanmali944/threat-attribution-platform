@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, Float, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -15,6 +15,14 @@ class Incident(Base):
     severity = Column(String(16), nullable=False, default="high")
     status = Column(String(32), nullable=False, default="investigating")
     assigned_to = Column(String(128), nullable=True)
+
+    # Developer A Analytical Extension Fields (CR-04)
+    risk_score = Column(Float, nullable=True)
+    risk_level = Column(String(32), nullable=True)  # low, medium, high, critical
+    layers = Column(JSON, nullable=True, default=list)  # Telemetry layers involved
+    first_seen = Column(DateTime(timezone=True), nullable=True, index=True)
+    last_seen = Column(DateTime(timezone=True), nullable=True, index=True)
+
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
     updated_at = Column(
         DateTime(timezone=True),

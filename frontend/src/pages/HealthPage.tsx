@@ -14,7 +14,7 @@ import {
 
 interface ServiceStatus {
   name: string;
-  status: 'operational' | 'degraded' | 'offline';
+  status: 'operational' | 'degraded' | 'offline' | 'pending';
   latency: string;
   details: string;
   icon: typeof Server;
@@ -83,24 +83,24 @@ export function HealthPage() {
       icon: Database,
     },
     {
-      name: 'Graph Correlation & Blast Radius Engine',
-      status: 'operational',
-      latency: '14ms',
-      details: 'Patient zero traversal & incident clustering algorithms.',
+      name: 'Graph Correlation Engine',
+      status: 'pending',
+      latency: 'Pending ML Engine',
+      details: 'Graph traversal, patient zero identification & incident blast radius calculation (Developer A contract).',
       icon: Cpu,
     },
     {
-      name: 'MITRE ATT&CK Attribution Pipeline',
-      status: 'operational',
-      latency: '8ms',
-      details: 'Tactics and techniques pattern matching with confidence scoring.',
+      name: 'MITRE Attribution Pipeline',
+      status: 'pending',
+      latency: 'Pending ML Engine',
+      details: 'Tactics and techniques pattern matching with ML confidence scoring (Developer A contract).',
       icon: Layers,
     },
     {
-      name: 'Real-time WebSocket Alert Stream',
-      status: 'operational',
-      latency: '5ms',
-      details: 'Streaming telemetry queue for instant SOC alert notification.',
+      name: 'WebSocket Alert Stream',
+      status: 'pending',
+      latency: 'Pending Pipeline',
+      details: 'Real-time WebSocket alert stream for instant SOC notification and live threat feeds.',
       icon: Radio,
     },
   ], [backendStatus, latencyMs]);
@@ -199,8 +199,24 @@ export function HealthPage() {
                       {srv.name}
                     </h3>
                   </div>
-                  <span className="flex items-center gap-1 font-mono text-xs text-emerald-400">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span
+                    className={`flex items-center gap-1.5 font-mono text-xs ${
+                      srv.status === 'operational'
+                        ? 'text-emerald-400'
+                        : srv.status === 'pending'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                    }`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        srv.status === 'operational'
+                          ? 'bg-emerald-400'
+                          : srv.status === 'pending'
+                          ? 'bg-amber-400 animate-pulse'
+                          : 'bg-rose-400'
+                      }`}
+                    />
                     {srv.latency}
                   </span>
                 </div>
@@ -211,7 +227,17 @@ export function HealthPage() {
 
               <div className="mt-4 flex items-center justify-between border-t border-[#334155] pt-3 text-[11px] font-mono">
                 <span className="text-[#64748b]">SERVICE STATUS:</span>
-                <span className="text-emerald-400 uppercase">{srv.status}</span>
+                <span
+                  className={`uppercase font-semibold ${
+                    srv.status === 'operational'
+                      ? 'text-emerald-400'
+                      : srv.status === 'pending'
+                      ? 'text-amber-400'
+                      : 'text-rose-400'
+                  }`}
+                >
+                  {srv.status}
+                </span>
               </div>
             </div>
           );

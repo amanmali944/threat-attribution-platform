@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.models.alert import Alert
 from app.models.attribution import Attribution
 from app.models.audit_log import AuditLog
-from app.models.entity import Entity
+from app.models.entity import Entity, generate_entity_id
 from app.models.incident import Incident
 from app.schemas.graph import GraphEdge, GraphNode
 from app.schemas.incident import (
@@ -17,8 +17,10 @@ from app.schemas.incident import (
     IncidentListResponse,
     IncidentResponse,
 )
+from app.api.v1.attributions import router as attributions_router
 
-router = APIRouter(prefix="/incidents", tags=["Incidents"])
+router = APIRouter()
+incidents_router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
 ALLOWED_STATUSES = {"open", "reviewed", "dismissed", "confirmed", "investigating", "closed"}
 
@@ -53,7 +55,7 @@ class IncidentGraphResponse(BaseModel):
     blast_radius: Optional[Dict[str, Any]] = None
 
 
-@router.post("", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
+@incidents_router.post("", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 def create_incident(incident_in: IncidentCreate, db: Session = Depends(get_db)):
     db_incident = Incident(
         tenant_id=incident_in.tenant_id,
@@ -62,6 +64,11 @@ def create_incident(incident_in: IncidentCreate, db: Session = Depends(get_db)):
         severity=incident_in.severity,
         status=incident_in.status,
         assigned_to=incident_in.assigned_to,
+        risk_score=incident_in.risk_score,
+        risk_level=incident_in.risk_level,
+        layers=incident_in.layers or [],
+        first_seen=incident_in.first_seen,
+        last_seen=incident_in.last_seen,
     )
 
     if incident_in.alert_ids:
@@ -74,7 +81,7 @@ def create_incident(incident_in: IncidentCreate, db: Session = Depends(get_db)):
     return db_incident
 
 
-@router.get("", response_model=IncidentListResponse)
+@incidents_router.get("", response_model=IncidentListResponse)
 def list_incidents(
     tenant_id: str = Query(..., description="Tenant ID filter"),
     status: Optional[str] = Query(None, description="Status filter"),
@@ -123,6 +130,9 @@ def list_incidents(
             created_dt = parse_datetime(fi.get("created_at"))
             updated_dt = parse_datetime(fi.get("updated_at"))
 
+            f_first_seen = parse_datetime(fi.get("first_seen")) if fi.get("first_seen") else None
+            f_last_seen = parse_datetime(fi.get("last_seen")) if fi.get("last_seen") else None
+
             filtered_fixtures.append(
                 IncidentResponse(
                     id=fi.get("id"),
@@ -132,6 +142,11 @@ def list_incidents(
                     severity=fi.get("severity", "high"),
                     status=fi.get("status", "open"),
                     assigned_to=fi.get("assigned_to"),
+                    risk_score=fi.get("risk_score"),
+                    risk_level=fi.get("risk_level"),
+                    layers=fi.get("layers", []),
+                    first_seen=f_first_seen,
+                    last_seen=f_last_seen,
                     created_at=created_dt,
                     updated_at=updated_dt,
                 )
@@ -151,7 +166,7 @@ def list_incidents(
     return IncidentListResponse(total=total, limit=limit, offset=offset, items=items)
 
 
-@router.get("/{incident_id}", response_model=IncidentResponse)
+@incidents_router.get("/{incident_id}", response_model=IncidentResponse)
 def get_incident(
     incident_id: str,
     tenant_id: Optional[str] = Query(None, description="Optional tenant ID filter"),
@@ -171,6 +186,8 @@ def get_incident(
         if fi.get("id") == incident_id:
             if tenant_id and fi.get("tenant_id") != tenant_id and tenant_id not in ["tenant-default-001", "tenant-01"]:
                 continue
+            f_first_seen = parse_datetime(fi.get("first_seen")) if fi.get("first_seen") else None
+            f_last_seen = parse_datetime(fi.get("last_seen")) if fi.get("last_seen") else None
             return IncidentResponse(
                 id=fi.get("id"),
                 tenant_id=tenant_id or fi.get("tenant_id"),
@@ -179,6 +196,11 @@ def get_incident(
                 severity=fi.get("severity", "high"),
                 status=fi.get("status", "open"),
                 assigned_to=fi.get("assigned_to"),
+                risk_score=fi.get("risk_score"),
+                risk_level=fi.get("risk_level"),
+                layers=fi.get("layers", []),
+                first_seen=f_first_seen,
+                last_seen=f_last_seen,
                 created_at=parse_datetime(fi.get("created_at")),
                 updated_at=parse_datetime(fi.get("updated_at")),
             )
@@ -189,7 +211,7 @@ def get_incident(
     )
 
 
-@router.patch("/{incident_id}", response_model=IncidentResponse)
+@incidents_router.patch("/{incident_id}", response_model=IncidentResponse)
 def update_incident_status(
     incident_id: str,
     update_in: IncidentStatusUpdate,
@@ -259,7 +281,7 @@ def update_incident_status(
     return db_incident
 
 
-@router.get("/{incident_id}/timeline", response_model=IncidentTimelineResponse)
+@incidents_router.get("/{incident_id}/timeline", response_model=IncidentTimelineResponse)
 def get_incident_timeline(
     incident_id: str,
     tenant_id: Optional[str] = Query(None, description="Optional tenant ID"),
@@ -408,7 +430,7 @@ def get_incident_timeline(
     )
 
 
-@router.get("/{incident_id}/graph", response_model=IncidentGraphResponse)
+@incidents_router.get("/{incident_id}/graph", response_model=IncidentGraphResponse)
 def get_incident_graph(
     incident_id: str,
     tenant_id: Optional[str] = Query(None, description="Optional tenant ID"),
@@ -430,6 +452,31 @@ def get_incident_graph(
 
     patient_zero: Optional[Dict[str, Any]] = None
     blast_radius: Optional[Dict[str, Any]] = None
+
+    if incident:
+        # Check if stored attribution graph data exists (CR-04)
+        if incident.attributions:
+            stored_attr = incident.attributions[-1]
+            if stored_attr.graph and isinstance(stored_attr.graph, dict) and "nodes" in stored_attr.graph:
+                g_nodes = [
+                    GraphNode(**n) if isinstance(n, dict) else n
+                    for n in stored_attr.graph.get("nodes", [])
+                ]
+                g_edges = [
+                    GraphEdge(**e) if isinstance(e, dict) else e
+                    for e in stored_attr.graph.get("edges", [])
+                ]
+                return IncidentGraphResponse(
+                    incident_id=incident_id,
+                    nodes=g_nodes,
+                    edges=g_edges,
+                    patient_zero=stored_attr.entry_point,
+                    blast_radius=stored_attr.blast_radius,
+                )
+            if stored_attr.entry_point:
+                patient_zero = stored_attr.entry_point
+            if stored_attr.blast_radius:
+                blast_radius = stored_attr.blast_radius
 
     if incident and incident.alerts:
         # Incident root node
@@ -492,19 +539,20 @@ def get_incident_graph(
                     )
                     if earliest_dt is None or (ent.first_seen and ent.first_seen < earliest_dt):
                         earliest_dt = ent.first_seen
-                        patient_zero = {
-                            "id": ent.id,
-                            "label": ent.identifier,
-                            "type": ent.entity_type,
-                            "first_seen": ent.first_seen.isoformat() if ent.first_seen else None,
-                        }
+                        if not patient_zero:
+                            patient_zero = {
+                                "id": ent.id,
+                                "label": ent.identifier,
+                                "type": ent.entity_type,
+                                "first_seen": ent.first_seen.isoformat() if ent.first_seen else None,
+                            }
 
         # Attributions
         for attr in incident.attributions:
             add_node(
                 GraphNode(
                     id=attr.id,
-                    label=attr.actor_name,
+                    label=attr.actor_name or "Unknown Actor",
                     type="threat_actor",
                     properties={"confidence": attr.confidence_score, "campaign": attr.campaign},
                 )
@@ -519,13 +567,14 @@ def get_incident_graph(
             )
 
         unique_ents = {e.id for e in all_entities}
-        blast_radius = {
-            "total_entities": len(unique_ents),
-            "affected_hosts": sum(1 for e in all_entities if e.entity_type == "host"),
-            "affected_users": sum(1 for e in all_entities if e.entity_type == "user"),
-            "affected_ips": sum(1 for e in all_entities if e.entity_type == "ip"),
-            "score": float(len(unique_ents)),
-        }
+        if not blast_radius:
+            blast_radius = {
+                "total_entities": len(unique_ents),
+                "affected_hosts": sum(1 for e in all_entities if e.entity_type == "host"),
+                "affected_users": sum(1 for e in all_entities if e.entity_type == "user"),
+                "affected_ips": sum(1 for e in all_entities if e.entity_type == "ip"),
+                "score": float(len(unique_ents)),
+            }
 
         return IncidentGraphResponse(
             incident_id=incident_id,
@@ -544,6 +593,27 @@ def get_incident_graph(
             detail=f"Incident '{incident_id}' not found",
         )
 
+    fixture_attributions = load_fixture("attribution.json")
+
+    # Check if fixture attribution has stored graph or entry_point/blast_radius (CR-04)
+    matching_attr = next((fa for fa in fixture_attributions if fa.get("incident_id") == incident_id), None)
+    if matching_attr and matching_attr.get("graph") and isinstance(matching_attr.get("graph"), dict) and "nodes" in matching_attr["graph"]:
+        g_nodes = [
+            GraphNode(**n) if isinstance(n, dict) else n
+            for n in matching_attr["graph"].get("nodes", [])
+        ]
+        g_edges = [
+            GraphEdge(**e) if isinstance(e, dict) else e
+            for e in matching_attr["graph"].get("edges", [])
+        ]
+        return IncidentGraphResponse(
+            incident_id=incident_id,
+            nodes=g_nodes,
+            edges=g_edges,
+            patient_zero=matching_attr.get("entry_point"),
+            blast_radius=matching_attr.get("blast_radius"),
+        )
+
     # Build graph from fixture datasets
     add_node(
         GraphNode(
@@ -557,7 +627,6 @@ def get_incident_graph(
     alert_ids = set(matching_fi.get("alert_ids", []))
     fixture_alerts = load_fixture("alerts.json")
     fixture_events = load_fixture("events.json")
-    fixture_attributions = load_fixture("attribution.json")
 
     event_map = {fe.get("event_id") or fe.get("id"): fe for fe in fixture_events}
     all_fixture_entities: List[Dict[str, Any]] = []
@@ -588,7 +657,7 @@ def get_incident_graph(
                 if evt_data:
                     evt_time = parse_datetime(evt_data.get("observed_at"))
                     for ent in evt_data.get("entities", []):
-                        ent_id = f"ent-{ent.get('entity_type')}-{ent.get('identifier')}"
+                        ent_id = generate_entity_id(ent.get("entity_type"), matching_fi.get("tenant_id", "tenant-default-001"), ent.get("identifier"))
                         ent_dict = {
                             "id": ent_id,
                             "label": ent.get("identifier"),
@@ -615,12 +684,13 @@ def get_incident_graph(
 
                         if earliest_seen is None or evt_time < earliest_seen:
                             earliest_seen = evt_time
-                            patient_zero = {
-                                "id": ent_id,
-                                "label": ent.get("identifier"),
-                                "type": ent.get("entity_type"),
-                                "first_seen": evt_time.isoformat(),
-                            }
+                            if not patient_zero:
+                                patient_zero = {
+                                    "id": ent_id,
+                                    "label": ent.get("identifier"),
+                                    "type": ent.get("entity_type"),
+                                    "first_seen": evt_time.isoformat(),
+                                }
 
     # Attributions
     for attr in fixture_attributions:
@@ -628,7 +698,7 @@ def get_incident_graph(
             add_node(
                 GraphNode(
                     id=attr["id"],
-                    label=attr["actor_name"],
+                    label=attr.get("actor_name") or "Unknown Actor",
                     type="threat_actor",
                     properties={
                         "confidence": attr.get("confidence_score"),
@@ -644,15 +714,20 @@ def get_incident_graph(
                     weight=float(attr.get("confidence_score", 1.0)),
                 )
             )
+            if not patient_zero and attr.get("entry_point"):
+                patient_zero = attr.get("entry_point")
+            if not blast_radius and attr.get("blast_radius"):
+                blast_radius = attr.get("blast_radius")
 
     unique_ent_ids = {e["id"] for e in all_fixture_entities}
-    blast_radius = {
-        "total_entities": len(unique_ent_ids),
-        "affected_hosts": sum(1 for e in all_fixture_entities if e["type"] == "host"),
-        "affected_users": sum(1 for e in all_fixture_entities if e["type"] == "user"),
-        "affected_ips": sum(1 for e in all_fixture_entities if e["type"] == "ip"),
-        "score": float(len(unique_ent_ids)),
-    }
+    if not blast_radius:
+        blast_radius = {
+            "total_entities": len(unique_ent_ids),
+            "affected_hosts": sum(1 for e in all_fixture_entities if e["type"] == "host"),
+            "affected_users": sum(1 for e in all_fixture_entities if e["type"] == "user"),
+            "affected_ips": sum(1 for e in all_fixture_entities if e["type"] == "ip"),
+            "score": float(len(unique_ent_ids)),
+        }
 
     return IncidentGraphResponse(
         incident_id=incident_id,
@@ -661,3 +736,8 @@ def get_incident_graph(
         patient_zero=patient_zero,
         blast_radius=blast_radius,
     )
+
+
+# Mount subrouters into composite router
+router.include_router(incidents_router)
+router.include_router(attributions_router)
