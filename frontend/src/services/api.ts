@@ -193,3 +193,58 @@ export const incidentsApi = {
   list: (tenantId: string, params?: Record<string, string | number>) =>
     api.get<IncidentListResponse>('/incidents', { params: { tenant_id: tenantId, ...params } }),
 };
+
+// ─── Graph / Attack Topology Types ──────────────────────────────────────────
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: string;
+  properties?: Record<string, any>;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  relation: string;
+  weight: number;
+}
+
+export interface PatientZero {
+  id?: string;
+  entity_id?: string;
+  entity_type?: string;
+  label?: string;
+  identifier?: string;
+  type?: string;
+  first_seen?: string;
+  observed_at?: string;
+  confidence?: number;
+  first_anomalous_event_id?: string;
+}
+
+export interface BlastRadius {
+  total_entities?: number;
+  reached_count?: number;
+  potential_reach_count?: number;
+  affected_hosts?: number;
+  affected_users?: number;
+  affected_ips?: number;
+  score?: number;
+}
+
+export interface IncidentGraphResponse {
+  incident_id: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  patient_zero: PatientZero | null;
+  blast_radius: BlastRadius | null;
+}
+
+/** Graph / Attack Topology APIs */
+export const graphApi = {
+  getIncidentGraph: (incidentId: string, tenantId?: string) =>
+    api.get<IncidentGraphResponse>(`/incidents/${incidentId}/graph`, {
+      params: tenantId ? { tenant_id: tenantId } : {},
+    }),
+};

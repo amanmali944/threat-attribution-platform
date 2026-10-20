@@ -1,7 +1,7 @@
 # Platform Current Status — Developer B (Platform & Presentation)
 
-**Last Updated:** October 09, 2026  
-**Overall Status:** Database File Alignment & Persistent SQLite Fallback Fix COMPLETE — 59/59 INTEGRATION & AUDIT TESTS PASSING (100%), PERSISTENT LOCAL DB (`threat_platform.db`) VERIFIED & FRONTEND PRODUCTION BUILD VERIFIED (0 LINT ERRORS/WARNINGS)
+**Last Updated:** October 20, 2026  
+**Overall Status:** Interactive Attack Graph Visualizer (Cytoscape.js) COMPLETE — Task 2.5 Delivered — 59/59 BACKEND TESTS PASSING (100%), FRONTEND PRODUCTION BUILD VERIFIED (0 LINT ERRORS)
 
 ---
 
@@ -16,6 +16,7 @@
 | **Route & DB Audit Fix** | Fixed Auth Router duplicate `/auth` prefix in `main.py`, Graceful DB fallback, Route Contract Audit Suite | **COMPLETE** | 8 Route & DB Resilience Tests Passing |
 | **Database File Alignment Fix** | Persistent SQLite DB (`threat_platform.db`), `backend/.env`, Seed & App Data Sharing, UI Quick-Fill 200 OK | **COMPLETE** | 59/59 Tests Passing & Live Login Verified (HTTP 200) |
 | **Phase 4 — Task 4.1: React + TS SOC Frontend Scaffolding** | Vite + React 19 + TypeScript + Tailwind v4, Axios Client + JWT Interceptors, AuthContext, Protected Routes, AppShell & Cyber SOC Pages | **COMPLETE** | `oxlint` (0 Errors / 0 Warnings) & `tsc -b && vite build` (Clean Build) |
+| **Phase 4 — Task 2.5: Interactive Attack Graph Visualizer** | Cytoscape.js Graph Engine, COSE Force-Directed Layout, Patient Zero Highlighting, Blast Radius Metrics, Node Detail Modal, Attack Topology Tab | **COMPLETE** | `tsc --noEmit` (0 Errors), `tsc -b && vite build` (Clean Build), `oxlint` (0 Errors) |
 | **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **59 / 59 Tests Passing (100%)** |
 
 ---
@@ -115,6 +116,31 @@ frontend/src/
 - **Linting (`oxlint`):** `0 warnings, 0 errors` across all 16 source files.
 - **TypeScript & Production Build (`tsc -b && vite build`):** Builds in <1s generating optimized production bundle in `frontend/dist/`.
 
+### 4.5 Attack Graph Visualizer (Task 2.5 — Cytoscape.js)
+
+A fully interactive, dynamically-driven attack graph visualization system integrated into the Incidents page:
+
+**New/Modified Files:**
+- `frontend/src/services/api.ts` — Added `GraphNode`, `GraphEdge`, `PatientZero`, `BlastRadius`, `IncidentGraphResponse` interfaces + `graphApi.getIncidentGraph()` typed API method.
+- `frontend/src/components/graph/AttackGraphVisualizer.tsx` — Core Cytoscape.js graph renderer with:
+  - **COSE force-directed layout** for automatic node positioning with physics simulation.
+  - **Patient Zero highlighting:** Glowing red/amber node with double border and shadow glow effects.
+  - **Compromised node styling:** Dark red background with red borders for alert & threat actor nodes.
+  - **Normal entity styling:** Type-aware color palette (cyan for hosts, teal for IPs, blue for users, etc.).
+  - **Interactive controls:** Zoom in, zoom out, fit-to-canvas, and refresh buttons.
+  - **Node click detail modal:** Inspector panel showing entity attributes, type badge, and Patient Zero indicator.
+  - **Metric cards:** Patient Zero identity, Blast Radius score, node/edge counts, and attack vector count.
+  - **Blast Radius breakdown bar:** Hosts, users, IPs, reached vs potential reach counts.
+  - **Legend overlay:** Color-coded node type reference.
+- `frontend/src/pages/IncidentsPage.tsx` — Redesigned with expandable investigation panels per incident card, featuring:
+  - **"Attack Topology" tab** (default): Renders the `AttackGraphVisualizer` component.
+  - **"Incident Details" tab:** Structured metadata grid with risk score, layers, timestamps.
+  - New UI elements: Risk score gauge, affected layers chips, expand/collapse controls.
+
+**Dependencies Added:**
+- `cytoscape` (runtime) — Graph theory library and visual renderer.
+- `@types/cytoscape` (dev) — TypeScript type definitions.
+
 ---
 
 ## 5. Automated Verification Matrix
@@ -165,4 +191,5 @@ dist/assets/index-CbQlg_zv.js   360.40 kB │ gzip: 112.63 kB
 ## 6. Next Steps
 
 - **Developer A Integration:** Detection engine and attribution models can consume live database sessions or offline fixtures directly.
-- **Frontend Presentation:** The frontend SOC Console is fully scaffolded, styled, and ready for end-to-end integration and visualization widgets.
+- **Frontend Graph Enhancement:** Code-split Cytoscape bundle for optimized loading; add timeline tab integration with graph syncing.
+- **Real-Time Updates:** Implement WebSocket-driven graph updates for live incident topology changes during active investigations.
