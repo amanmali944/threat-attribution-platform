@@ -45,7 +45,7 @@ from typing import Any, Dict, List, Optional, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _common import Rule, label_line, load_rules, open_text  # noqa: E402,F401
+from _common import LineLabeller, Rule, RuleLabeller, label_line, load_rules, open_text  # noqa: E402,F401
 from app.services.detection import contract as C  # noqa: E402
 from app.services.detection.resolve import iso_utc  # noqa: E402
 
@@ -107,6 +107,8 @@ def to_event(
     source_file: str,
     lineno: int,
     application: str = APPLICATION,
+    id_prefix: str = DATASET,
+    dataset_name: str = "web-server-log-dataset",
 ) -> Dict[str, Any]:
     entities = [{"entity_type": "application", "identifier": application}]
     if record["user"]:
@@ -122,7 +124,7 @@ def to_event(
         if record[key]:
             payload[key] = record[key]
     return {
-        "event_id": f"{DATASET}-{source_file}-{lineno:07d}",
+        "event_id": f"{id_prefix}-{source_file}-{lineno:07d}",
         "tenant_id": tenant,
         "source_layer": "application",
         "event_type": "http_request",
@@ -130,7 +132,7 @@ def to_event(
         "severity": "info",
         "entities": entities,
         "payload": payload,
-        "metadata": {"dataset": "web-server-log-dataset", "source_file": source_file, "line": lineno},
+        "metadata": {"dataset": dataset_name, "source_file": source_file, "line": lineno},
     }
 
 
@@ -169,9 +171,18 @@ def convert(
     limit: Optional[int] = None,
     access_glob: Optional[str] = None,
     app_regex: Optional[str] = None,
+    line_labels: bool = False,
+    id_prefix: str = DATASET,
+    dataset_name: str = "web-server-log-dataset",
 ) -> Dict[str, Any]:
-    rules_path = rules_path or find_rules_file(org_dir)
-    rules = load_rules(rules_path)
+    if line_labels:            # AIT: per-line ground truth next to the logs
+        rules: List[Rule] = []
+        rules_path = None
+        labeller: Any = LineLabeller(org_dir)
+    else:                      # Web Server Log Dataset: text-pattern rules
+        rules_path = rules_path or find_rules_file(org_dir)
+        rules = load_rules(rules_path)
+        labeller = RuleLabeller(rules)
     files = access_log_files(org_dir, access_glob)
     app_pattern = re.compile(app_regex) if app_regex else None
     os.makedirs(out_dir, exist_ok=True)
@@ -210,14 +221,14 @@ def convert(
                             unparsed_samples.append(f"{source_file}:{lineno}: {line.strip()[:200]}")
                         continue
 
-                    event = to_event(record, tenant, source_file, lineno, application)
+                    event = to_event(record, tenant, source_file, lineno, application, id_prefix, dataset_name)
                     for problem in C.validate_event(event):
                         problems[problem] += 1
                     events_out.write(json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n")
                     totals["events"] += 1
                     file_events += 1
 
-                    hits = label_line(line, record["status_code"], rules)
+                    hits = labeller.hits(path, lineno, line, record["status_code"])
                     if hits["moderate"] or hits["strict"]:
                         labels_out.write(
                             json.dumps(
@@ -244,12 +255,15 @@ def convert(
                     last = moment if last is None or moment > last else last
             per_file.append({"file": source_file, "application": application, "lines": file_lines, "events": file_events})
 
-    with open(rules_path, "rb") as handle:
-        rules_sha = hashlib.sha256(handle.read()).hexdigest()
+    rules_sha = None
+    if rules_path:
+        with open(rules_path, "rb") as handle:
+            rules_sha = hashlib.sha256(handle.read()).hexdigest()
     report = {
-        "dataset": "web-server-log-dataset",
+        "dataset": dataset_name,
         "tenant_id": tenant,
-        "rules_file": os.path.basename(rules_path),
+        "label_source": labeller.source,
+        "rules_file": os.path.basename(rules_path) if rules_path else None,
         "rules_sha256": rules_sha,
         "rules_loaded": len(rules),
         "files": per_file,
@@ -285,9 +299,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--limit", type=int, default=None, help="stop after N events (smoke tests)")
     parser.add_argument("--access-glob", default=None, help="access-log glob relative to org_dir (default: Org X layout)")
     parser.add_argument("--app-regex", default=None, help="regex over the relative log path; group 1 = application name")
+    parser.add_argument("--line-labels", action="store_true", help="AIT: per-line labels under labels/ instead of rules")
+    parser.add_argument("--id-prefix", default=DATASET, help="event ID prefix")
+    parser.add_argument("--dataset-name", default="web-server-log-dataset")
     args = parser.parse_args(argv)
 
-    report = convert(args.org_dir, args.out_dir, args.tenant, args.rules, args.limit, args.access_glob, args.app_regex)
+    report = convert(args.org_dir, args.out_dir, args.tenant, args.rules, args.limit, args.access_glob, args.app_regex,
+                     args.line_labels, args.id_prefix, args.dataset_name)
     print(json.dumps({k: v for k, v in report.items() if k not in ("files",)}, indent=2, sort_keys=True))
     return 0
 

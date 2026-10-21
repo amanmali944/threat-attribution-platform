@@ -40,7 +40,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _common import label_line, load_rules, open_text  # noqa: E402
+from _common import LineLabeller, RuleLabeller, label_line, load_rules, open_text  # noqa: E402,F401
 from app.services.detection import contract as C  # noqa: E402
 from app.services.detection.resolve import iso_utc  # noqa: E402
 
@@ -56,6 +56,8 @@ MONTHS = {m: i for i, m in enumerate(
 FAILED_RE = re.compile(r"^Failed (\S+) for (invalid user )?(.*?) from (\S+) port (\d+)")
 ACCEPTED_RE = re.compile(r"^Accepted (\S+) for (.*?) from (\S+) port (\d+)")
 EMPTY_USER = "<empty>"  # the contract needs a non-empty identifier
+SU_OK_RE = re.compile(r"^Successful su for (\S+) by (\S+)")
+SU_FAIL_RE = re.compile(r"^FAILED su for (\S+) by (\S+)")
 SUDO_RE = re.compile(
     r"^\s*(\S+)\s*:\s*(?:TTY=(\S+)\s*;\s*)?PWD=(\S+)\s*;\s*USER=(\S+)\s*;\s*(?:GROUP=(\S+)\s*;\s*)?COMMAND=(.*)$"
 )
@@ -98,6 +100,13 @@ def classify(rec: Dict[str, Any]) -> Tuple[str, Any]:
         if msg.startswith(("Connection closed", "Disconnected", "Received disconnect", "Connection reset")):
             return "skip", "ssh_connection_noise"
         return "skip", "ssh_other"
+    if proc == "su":
+        m = SU_OK_RE.match(msg)
+        if m:
+            return "su_success", m
+        if SU_FAIL_RE.match(msg):
+            return "skip", "su_failed"
+        return "skip", "su_other"
     if proc == "sudo":
         m = SUDO_RE.match(msg)
         if m:
@@ -112,15 +121,21 @@ def classify(rec: Dict[str, Any]) -> Tuple[str, Any]:
     return "skip", "other"
 
 
-def to_event(kind: str, match: "re.Match[str]", rec: Dict[str, Any], tenant: str, source_file: str, lineno: int) -> Dict[str, Any]:
+def to_event(kind: str, match: "re.Match[str]", rec: Dict[str, Any], tenant: str, source_file: str, lineno: int,
+             id_prefix: str = DATASET, dataset_name: str = "web-server-log-dataset") -> Dict[str, Any]:
     host = rec["host"]
     base = {
-        "event_id": f"{DATASET}-{source_file}-{lineno:07d}",
+        "event_id": f"{id_prefix}-{source_file}-{lineno:07d}",
         "tenant_id": tenant,
         "observed_at": iso_utc(rec["observed_at"]),
         "severity": "info",
-        "metadata": {"dataset": "web-server-log-dataset", "source_file": source_file, "line": lineno, "pid": rec["pid"]},
+        "metadata": {"dataset": dataset_name, "source_file": source_file, "line": lineno, "pid": rec["pid"]},
     }
+    if kind == "su_success":
+        target_user, invoker = match.groups()
+        return dict(base, source_layer="endpoint", event_type="process_execution",
+                    entities=[{"entity_type": "host", "identifier": host}, {"entity_type": "user", "identifier": invoker}],
+                    payload={"process_name": "su", "command_line": f"su {target_user}", "run_as": target_user})
     if kind == "ssh_failed":
         method, invalid, user, ip, port = match.groups()
         user = user.strip() or EMPTY_USER
@@ -159,13 +174,22 @@ def convert(
     rules_path: Optional[str] = None,
     auth_glob: str = "log/var/log/auth.log",
     limit: Optional[int] = None,
+    line_labels: bool = False,
+    id_prefix: str = DATASET,
+    dataset_name: str = "web-server-log-dataset",
 ) -> Dict[str, Any]:
-    if rules_path is None:
-        found = sorted(glob.glob(os.path.join(org_dir, "ground-truth", "*.yaml")))
-        if not found:
-            raise FileNotFoundError(f"no ground-truth *.yaml under {org_dir}")
-        rules_path = found[0]
-    rules = load_rules(rules_path)
+    if line_labels:            # AIT: per-line ground truth next to the logs
+        rules: List[Any] = []
+        rules_path = None
+        labeller: Any = LineLabeller(org_dir)
+    else:
+        if rules_path is None:
+            found = sorted(glob.glob(os.path.join(org_dir, "ground-truth", "*.yaml")))
+            if not found:
+                raise FileNotFoundError(f"no ground-truth *.yaml under {org_dir}")
+            rules_path = found[0]
+        rules = load_rules(rules_path)
+        labeller = RuleLabeller(rules)
     files = auth_log_files(org_dir, auth_glob)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -201,7 +225,7 @@ def convert(
                         totals["skipped"] += 1
                         continue
 
-                    event = to_event(kind, detail, rec, tenant, source_file, lineno)
+                    event = to_event(kind, detail, rec, tenant, source_file, lineno, id_prefix, dataset_name)
                     for problem in C.validate_event(event):
                         problems[problem] += 1
                     events_out.write(json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n")
@@ -214,7 +238,7 @@ def convert(
                     elif kind == "ssh_accepted":
                         accepted_ips.add(event["payload"]["source_ip"])
 
-                    hits = label_line(line, None, rules)
+                    hits = labeller.hits(path, lineno, line, None)
                     if hits["moderate"] or hits["strict"]:
                         labels_out.write(json.dumps(
                             {"event_id": event["event_id"], "labels": hits["moderate"], "labels_strict": hits["strict"]},
@@ -232,15 +256,18 @@ def convert(
                     last = moment if last is None or moment > last else last
             per_file.append({"file": source_file, "lines": file_lines, "events": file_events})
 
-    with open(rules_path, "rb") as handle:
-        rules_sha = hashlib.sha256(handle.read()).hexdigest()
+    rules_sha = None
+    if rules_path:
+        with open(rules_path, "rb") as handle:
+            rules_sha = hashlib.sha256(handle.read()).hexdigest()
     report = {
-        "dataset": "web-server-log-dataset",
-        "source": "auth.log (sshd, sudo)",
+        "dataset": dataset_name,
+        "source": "auth.log (sshd, su, sudo)",
         "tenant_id": tenant,
+        "label_source": labeller.source,
         "timestamp_assumptions": {"year": year, "utc_offset_hours": utc_offset_hours,
                                   "note": "syslog has no year or zone; both are assumed"},
-        "rules_file": os.path.basename(rules_path),
+        "rules_file": os.path.basename(rules_path) if rules_path else None,
         "rules_sha256": rules_sha,
         "rules_loaded": len(rules),
         "files": per_file,
@@ -280,9 +307,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--rules", default=None)
     parser.add_argument("--auth-glob", default="log/var/log/auth.log", help="relative to org_dir")
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--line-labels", action="store_true", help="AIT: per-line labels under labels/ instead of rules")
+    parser.add_argument("--id-prefix", default=DATASET)
+    parser.add_argument("--dataset-name", default="web-server-log-dataset")
     args = parser.parse_args(argv)
     report = convert(args.org_dir, args.out_dir, args.tenant, args.year, args.utc_offset,
-                     args.rules, args.auth_glob, args.limit)
+                     args.rules, args.auth_glob, args.limit, args.line_labels, args.id_prefix, args.dataset_name)
     print(json.dumps({k: v for k, v in report.items() if k != "files"}, indent=2, sort_keys=True))
     return 0
 

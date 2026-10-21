@@ -7,6 +7,8 @@ the caveats that apply to every label produced here.
 from __future__ import annotations
 
 import gzip
+import json
+import os
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -66,3 +68,60 @@ def open_text(path: str):
     if path.endswith(".gz"):
         return gzip.open(path, "rt", encoding="utf-8", errors="replace")
     return open(path, "rt", encoding="utf-8", errors="replace")
+
+
+# --------------------------------------------------------------------------- AIT per-line labels
+#
+# AIT-LDS v2.0 ships ground truth as one JSON object per labelled log line,
+# {"line": N, "labels": [...], "rules": {label: [rule, ...]}}, in labels/<same path as gather/>.
+# A log file without a label file has no attack lines.
+
+
+def load_line_labels(path: str) -> Dict[int, List[Dict[str, str]]]:
+    """line number (1-based) -> [{rule_id, label}] from an AIT label file (empty if absent)."""
+    out: Dict[int, List[Dict[str, str]]] = {}
+    if not os.path.exists(path):
+        return out
+    with open(path, "rt", encoding="utf-8") as handle:
+        for raw in handle:
+            if not raw.strip():
+                continue
+            record = json.loads(raw)
+            rules = record.get("rules", {})
+            out[int(record["line"])] = [
+                {"rule_id": (rules.get(label) or ["ait"])[0], "label": label} for label in record["labels"]
+            ]
+    return out
+
+
+def ait_label_path(org_dir: str, raw_path: str) -> str:
+    """gather/<host>/logs/x  ->  labels/<host>/logs/x"""
+    rel = os.path.relpath(raw_path, os.path.join(org_dir, "gather"))
+    return os.path.join(org_dir, "labels", rel)
+
+
+class RuleLabeller:
+    """Labels from text-pattern rules (Web Server Log Dataset)."""
+
+    source = "rules"
+
+    def __init__(self, rules: Sequence[Rule]):
+        self.rules = list(rules)
+
+    def hits(self, raw_path: str, lineno: int, line: str, status_code: Optional[int] = None):
+        return label_line(line, status_code, self.rules)
+
+
+class LineLabeller:
+    """Labels from AIT per-line ground truth files."""
+
+    source = "line-labels"
+
+    def __init__(self, org_dir: str):
+        self.org_dir = org_dir
+        self._cache: Dict[str, Dict[int, List[Dict[str, str]]]] = {}
+
+    def hits(self, raw_path: str, lineno: int, line: str, status_code: Optional[int] = None):
+        if raw_path not in self._cache:
+            self._cache[raw_path] = load_line_labels(ait_label_path(self.org_dir, raw_path))
+        return {"moderate": list(self._cache[raw_path].get(lineno, [])), "strict": []}

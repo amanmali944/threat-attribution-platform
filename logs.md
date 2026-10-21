@@ -10,14 +10,15 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (126)
-python -m pytest tests -q                    # whole backend suite (185)
+python -m pytest tests/detection -q          # Developer A tests (138)
+python -m pytest tests -q                    # whole backend suite (197)
 
 # Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
 python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
 python -I scripts/adapters/syslog_auth.py <organization-y dir> <output dir> --tenant org-y --year 2025
 python -I scripts/build_org_y_windows.py <derived auth dir> data/specs/org_y_incident.json <windows dir>
 python -I scripts/evaluate_org_y.py <windows dir> data/specs/org_y_incident.json data/evaluation/phase3_org_y.json --model-dir <models dir>
+python -I scripts/convert_ait_scenario.py data/external/ait/russellmitchell data/external/ait/derived/russellmitchell --scenario russellmitchell --year 2022
 ```
 
 ---
@@ -52,7 +53,7 @@ python -I scripts/evaluate_org_y.py <windows dir> data/specs/org_y_incident.json
 
 ## Phase 1 — Real-data corpus & ground truth
 
-**Status:** IN PROGRESS — 1a (Org X), 1c (Org Y) and 1b (labels/splits for Org Y) done; 1d (AIT) pending
+**Status:** IN PROGRESS — 1a (Org X), 1c (Org Y), 1b (labels/splits for Org Y) and 1d conversion (AIT `russellmitchell`) done; AIT labels/splits next
 
 ### Decision history
 - The original plan was a seeded synthetic generator (normal activity + four labelled attack scenarios). When this phase was started in the assistant session, that step was **halted by the tool's safety check** and the generator was **not written**; it was not retried or reworded.
@@ -185,8 +186,58 @@ Incident windows by entity type: 10 user, 6 host, 5 IP. Notable events: 356 inci
 3. Time zone assumed UTC; the incident interval depends on it.
 4. 50 test windows are `unknown` and excluded; if some of them are malicious, recall is overstated, and if benign, false-alarm rates are understated.
 
+### 1d — AIT-LDS v2.0, scenario `russellmitchell` (slice)
+**Date:** Oct 21, 2026 · **Status:** conversion DONE · windows / labels / evaluation next
+
+**Source:** AIT Log Data Set v2.0, Zenodo record 5789064, licence **CC BY-NC-SA 4.0** (non-commercial, share-alike — derived data stays in the git-ignored `data/external/`). `russellmitchell.zip` is 7,132,670,599 bytes with 14,911 members. A simulated small company (web/intranet server, VPN, firewall with DNS, file share, mail) with employees working normally for days before a scripted multi-step attack.
+
+**What was fetched (no full download):** the zip directory was read by HTTP range requests; **23 members** were extracted (≈18 MB over the network, ≈49 MB on disk), each CRC32-checked: `dataset.yaml`, the attacker's step timeline `attacks.log`, host/log configuration, **all 8 label files**, and the raw logs they label — intranet Apache access logs (4 rotations), intranet `auth.log` (2) and `audit.log`, firewall `dnsmasq.log`, VPN `openvpn.log`, file-share `audit.log`. (A first listing crashed on a non-ASCII member name under the Windows console; the script now writes UTF-8. `-I` mode ignores `PYTHONIOENCODING`, which is why setting it did nothing.)
+
+**Ground truth is much better than Org Y's:** one JSON object per labelled raw line, `{"line", "labels", "rules"}`, in `labels/` mirroring `gather/`. A log with no label file has no attack lines.
+
+**What happened in this scenario** (dataset window Jan 21 00:00 – Jan 25 00:00, UTC; from `attacks.log` and the labels):
+| Time (Jan 24, UTC) | Step | Layer / log | Labelled lines |
+| :--- | :--- | :--- | ---: |
+| 03:01:00 | VPN login **with jhall's certificate from a new external IP**, while jhall's normal session (another IP) is still connected | identity / openvpn | 28 (1 connection event) |
+| 03:01:21 | DNS brute force (414 queries in one second), then network/host discovery to 03:37 | network / dnsmasq | 414 + 92 |
+| 03:56–03:57 | service scan, then `dirb` and `wpscan` against the intranet WordPress | application / Apache | 4,462 dirb + 3,186 wpscan |
+| 03:58:20 | webshell upload (wpDiscuz vulnerability), then ~30 recon commands through it | application / Apache | 3 + 32 |
+| 04:37 | reverse shell; web-server account `su` to jhall (password cracked offline) | endpoint / auth.log | 1 su event |
+| 04:38:06 | `sudo cat /etc/shadow` as jhall; VPN disconnect at 04:38:11 | endpoint / auth.log | 2 sudo events |
+| **Jan 21 00:00 → Jan 24 13:52** | **DNSteal exfiltration from internal host 10.143.0.103, labelled continuously from the first minute of the dataset** | network / dnsmasq | 53,054 lines → 17,693 query events |
+
+**Adapters added or extended:**
+| File | Change |
+| :--- | :--- |
+| `scripts/adapters/_common.py` | `load_line_labels`, `ait_label_path`, `LineLabeller` / `RuleLabeller` (one labelling interface for both datasets) |
+| `scripts/adapters/web_server_logs.py` | `--line-labels`, configurable event-ID prefix and dataset name |
+| `scripts/adapters/syslog_auth.py` | `su` events (endpoint `process_execution`, `process_name: su`, counted as privileged); `--line-labels`; ID prefix |
+| `scripts/adapters/dnsmasq.py` (new) | one `network/dns_query` event per `query[...]` line; forwarded / reply / cached lines skipped and counted; target = registered domain (so 17k unique exfiltration subdomains do not become 17k entities), full name, length and label count kept in the payload |
+| `scripts/adapters/openvpn.py` (new) | one `identity/user_login` SUCCESS per completed connection (user = certificate CN, source IP, assigned VPN IP); handshake, soft resets and session lines skipped and counted |
+| `scripts/convert_ait_scenario.py` (new) | runs every adapter for one scenario, one output per source and host (IDs cannot collide), writes `summary.json` |
+
+**Conversion results (real data)** — every source balances `lines = events + skipped + unparsed`, 0 contract problems:
+| Source | Lines | Events | Skipped | Labelled events | Notes |
+| :--- | ---: | ---: | ---: | ---: | :--- |
+| Web (intranet Apache, 4 files) | 11,184 | 11,184 | 0 | 7,695 | only ~5 benign internal clients; 8,027 requests from the attacker address |
+| DNS (firewall dnsmasq) | 275,900 | 81,277 | 194,623 | 17,978 | 15 query sources; 17,693 labelled queries are the exfiltration |
+| VPN (openvpn) | 5,537 | 66 | 5,471 | 1 | 3 users: ahayes 31, twhite 32, jhall 3 connections |
+| Auth (intranet) | 628 | 6 | 622 | 3 | 3 SSH logins, 1 su, 2 sudo |
+
+The labelled counts were checked against an **independent recount from AIT's own label files** (every labelled line of a kind we convert must become a labelled event): web 7,695 = 7,695, DNS 17,978 = 17,978, VPN 1 = 1, auth 3 = 3.
+
+**Tests (`test_ait_adapters.py`, 12 passed):** label-path mapping and lookup, missing label file = no attack lines, dnsmasq parsing / skip reasons / registered domain / event validity / conversion counts, OpenVPN one-login-per-connection / event validity / conversion, `su` as a privileged process, web adapter in line-label mode, and the real-data recount above. **Mutation check: 4 / 4 caught** (label lookup off by one line, registered domain cut to one label, VPN connections never emitted, `su` invoker and target swapped). Whole backend suite: **197 passed** (platform 59 + detection 138).
+
+**What this means for the next steps:**
+1. **This is the first dataset that allows an honest evaluation.** It has days of benign activity before a labelled multi-layer attack, and rules-1.1.0 was decided from Org Y *before* this data was opened. Caveat: the AIT timeline has now been read to define labels, so the incident's shape is known; thresholds will still come only from the benign days.
+2. **The DNS exfiltration runs from the first minute of the data.** For that host there is no clean "normal" period, and the spec loader will (correctly) refuse it as an incident overlapping train. It needs to be handled as a separate target. Plan: evaluate it both ways and report both — (a) as is, with the contaminated baseline (realistic: nobody gets clean data), and (b) with that host's labelled windows excluded from baseline and training, disclosed as label-informed cleaning — and judge it mainly by peer comparison against the other 14 query sources.
+3. **Cold-start blind spot.** jhall connected to the VPN only twice before the attack, below the 20-event minimum history, so novelty features stay 0 and RULE-IDN-003 cannot fire on the stolen-certificate login. The guard that stops false alarms on new accounts also hides misuse of rarely used accounts. To be measured, not tuned away.
+4. **Cross-layer gap for attribution:** the VPN gives the intruder 10.9.0.10, but web and DNS logs see the attacker as 172.19.131.174 (translated at the firewall). Linking the VPN identity to the later activity needs NAT or firewall connection logs, which are not in this slice.
+5. Only ~500 benign web requests in four days: the web layer is small, so its baselines will be thin.
+
 ### Next in Phase 1
-- **1d:** AIT-LDS v2.0 slice (8 scenarios, each a labelled multi-step attack with per-line labels and days of benign activity) — needed for anything supervised (scenario-level splits, leave-one-scenario-out) and for a fair, not-seen-before evaluation. 7.1–26.5 GB zips, so range-read and extract only chosen members.
+- **1b for AIT:** spec + window labels (intrusion incident Jan 24 03:00–04:40; exfiltration as a separate class, both variants above), time-ordered splits with Jan 21–23 as baseline / train / validation.
+- Then: rules-1.1.0 + Isolation Forest evaluated on AIT (the first unseen test), and the same slice from more AIT scenarios for anything supervised.
 
 ---
 
@@ -353,7 +404,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. **Phase 1d — AIT-LDS slice.** Needed for anything supervised and for an evaluation on an attack nobody has looked at yet (8 scenarios, per-line labels, days of benign activity).
+1. **AIT labels and splits** (incident + separate exfiltration class) — conversion is done (Phase 1d).
 2. **rules-1.1.0** (strict calibrated thresholds + validation gate), judged on AIT.
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).
