@@ -3,7 +3,7 @@
 **Owner:** Developer A (Detection & Intelligence)  
 **Branch:** `predictions`  
 **Contract:** `docs/DETECTION_CONTRACT.md`  
-**Last Updated:** October 09, 2026
+**Last Updated:** October 21, 2026
 
 ## 1. Goal
 
@@ -174,6 +174,39 @@ Directory names follow `docs/ARCHITECTURE.md` (`services/detection/`, `services/
 
 ---
 
+## 4A. ML Strategy — how the detector is actually "ML"
+
+Rules give precision on patterns we already know. ML is what generalises to variants and to behaviour no rule was written for, and the fusion model is the component that *decides*. Every model reads the same `fs-1.0.0` Feature Vectors; none gets a private feature pipeline.
+
+| # | Layer | Model | Learns from | Why it earns its place | Output |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Baseline-relative features | novelty, off-hours, peer z-scores (Phase 2, done) | a normal period | Turns raw counts into "how unusual *for this entity*", so models generalise across busy and quiet users | Feature Vector |
+| 2 | Anomaly detector | Isolation Forest, one model per subject type (user / ip / host) | normal windows only — no attack labels | Finds behaviour with no rule. Types get separate models because their feature distributions differ | score in [0,1] = ECDF rank against normal training scores ("rarer than 99% of normal windows") |
+| 3 | Sequence model | n-gram / first-order Markov over per-entity tokens `layer:event_type:outcome`, add-k smoothing | normal sequences | Catches unusual *order across layers* (login → role change → bulk read) that single-window features cannot see | score = percentile of mean negative log-likelihood vs normal sequences |
+| 4 | **Fusion (the decision model)** | logistic regression (interpretable) with HistGradientBoosting as challenger, over rule hits + IF score + sequence score + a few key features | labelled windows | Learns how far to trust each detector in context. The only place attack labels are needed, with ≤ ~15 inputs to limit overfitting | p(hostile) |
+| 5 | Calibration | isotonic (Platt as fallback) on a held-out split | held-out data | Makes confidence mean what it says; τ_alert / τ_review chosen on validation data for a target precision | `confidence`, `decision` (alert / review / suppress) |
+
+**Explainability.** Logistic regression contribution = coefficient × standardised feature value; Isolation Forest explanation = features that deviate most from the normal distribution; rules cite the feature values that fired. All of it goes into the Alert Envelope `evidence`.
+
+**Evaluation protocol (so we cannot fool ourselves).**
+- Split by **scenario run (seed)**, never by window: an attack run never appears in both training and test.
+- **Leave-one-attack-class-out:** train fusion without one class (e.g. exfiltration) and test on it. This measures generalisation; the unsupervised layers have to carry it.
+- **Ablations:** rules only, Isolation Forest only, sequence only, rules + IF, full fusion. Fusion must beat the best single detector on PR-AUC *and* on alerts per analyst per day at equal recall — if it does not, we report that.
+- **Dumb baselines** for context: a fixed threshold on event count, random scoring.
+- **Metrics:** PR-AUC, precision / recall at the operating point per attack class, ECE / Brier, abstention rate, alerts per analyst per day. No accuracy headline.
+- **Distribution shift:** at least one held-out seed with different volume, timing and noise.
+- Repeat over several seeds and report the spread, not one lucky number.
+
+**Risks and mitigations.**
+- *Synthetic data leakage* (models learn generator artefacts): randomise timing / volume / ordering; include benign look-alikes as hard negatives (admin bulk export, backup jobs, forgotten passwords); report across seeds.
+- *Cold start* (new entity, no history): baseline `min_history_events` gives 0 for novelty instead of false alarms; uncertain cases go to `review`.
+- *Label scarcity:* unsupervised layers do the heavy lifting; the supervised stage stays small and regularised.
+- *Drift:* baseline is a versioned artefact that can be refitted; out of scope for v1 beyond versioning.
+
+**Artefacts.** Trained models and calibrators are saved with `joblib` under `data/models/`, each stamped with `detector_version` / `calibration_version`, so every number in the dashboard traces back to the model that produced it.
+
+---
+
 ## 5. Dependency Order
 
 ```
@@ -206,9 +239,9 @@ Blocking or automated response, full graph database, graph neural networks, more
 
 | Phase | Status | Notes |
 | :--- | :--- | :--- |
-| 0 — Setup & contract | In progress | Contract + plan drafted; CRs sent to Developer B |
-| 1 — Corpus & ground truth | Not started | |
-| 2 — Resolution & features | Not started | |
+| 0 — Setup & contract | **Done** (Oct 21, 2026) | Contract + plan committed; CR-01 … CR-07 delivered by Developer B and verified on `main`; platform runs locally, 59/59 platform tests pass |
+| 1 — Corpus & ground truth | **Deferred** | Labelled data source still to be decided — see `logs.md`. Blocks training / evaluation in Phases 3b–8 |
+| 2 — Resolution & features | **Done** (Oct 21, 2026) | 22 features, entity resolution, baseline; 46 tests pass; see `logs.md` |
 | 3 — Detectors | Not started | |
 | 4 — Fusion & calibration | Not started | |
 | 5 — Correlation | Not started | |

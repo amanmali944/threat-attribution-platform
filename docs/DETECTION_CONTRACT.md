@@ -107,10 +107,13 @@ All platform code paths must use this one scheme (**CR-06**).
 | Role | Rule (first match wins) |
 | :--- | :--- |
 | `actor_user` | entity of type `user`, else `cloud_identity` |
-| `actor_ip` | `payload.source_ip`, else entity of type `ip` |
-| `actor_device` | `payload.device_id` / `payload.source_host`, else entity of type `device` |
-| `target` | `database` layer → `database` entity; `application` layer → `application` entity; `endpoint` layer → `host` entity; `identity` layer → `application` or `host` entity; `cloud` layer → `payload.service` |
-| `target_criticality` | `entities.properties.criticality` (1–5), default `1` |
+| `actor_ip` | `payload.source_ip`, else first entity of type `ip` |
+| `actor_host` | `payload.source_host` (a `host`), else for `endpoint` layer the `host` entity the activity ran on |
+| `actor_device` | `payload.device_id`, else entity of type `device` |
+| `target` | `database` layer → `database` entity; `application` layer → `application` entity; `endpoint` layer → `host` entity; `identity` layer → `application` entity if present, else `host` entity; `network` layer → `domain` entity, else `payload.dst_ip` (`ip`); `cloud` layer → `payload.service` (`application`) |
+| `target_criticality` | Asset inventory (`data/corpus/assets.json`, or the entity's `properties.criticality` when read from the platform), 1–5, default `1` |
+
+Identifiers that appear only in `payload` (`source_ip`, `source_host`, `device_id`, `dst_ip`, `service`) become entities with the same deterministic ID scheme, so the same IP is one entity whether it came from `entities[]` or from `payload`.
 
 ```json
 {
@@ -122,6 +125,7 @@ All platform code paths must use this one scheme (**CR-06**).
   "observed_at": "2026-10-05T10:18:45Z",
   "actor_user": "ent-user-3f9a1c22",
   "actor_ip": "ent-ip-91b0d4e7",
+  "actor_host": null,
   "actor_device": null,
   "target": "ent-host-0c7e55a1",
   "target_criticality": 5,
@@ -183,6 +187,15 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 | `peer.targets_zscore` | Peer-relative | z-score of `diversity.distinct_targets` vs cohort |
 
 Adding or renaming a feature bumps `feature_set_version`. Window length is configurable (`window_seconds`, default 300).
+
+### 3.2 Subjects, windows and baselines
+
+- **Subject entities.** An event contributes to the vector of each *actor-side* entity it has: `actor_user`, `actor_ip`, `actor_host`. Targets do not get vectors in v1. So a brute-force burst shows up on both the targeted user and the source IP.
+- **Windows.** Aligned to the Unix epoch so replays are identical: a window starts at a multiple of `stride_seconds` (default = `window_seconds`, i.e. tumbling). A `stride_seconds` smaller than `window_seconds` gives overlapping (hopping) windows, so a burst split across a boundary is still caught whole. A vector is emitted only for windows that contain at least one event for the entity.
+- **Baseline.** Novelty, off-hours and peer features compare a window to a *baseline* fitted from a designated normal period (`fit_baseline`). The baseline is an input artefact (versioned, serialisable); the feature function is the same for training, evaluation and live use. Cold start: an entity with fewer than `min_history_events` (default 20) baseline events gets `0` for novelty and off-hours rather than flagging every new entity as anomalous.
+- **Peer cohort.** Default cohort = `entity_type`. An optional `cohort_of` mapping (entity ID → cohort name, e.g. a role from the asset inventory) refines it. z-scores use the cohort's baseline mean and standard deviation with a floor of `1.0` on the standard deviation (counts are integers).
+- **Degenerate values.** `timing.interarrival_cv` is `1.0` (neutral) with fewer than 3 events, and `0.0` if the mean gap is 0. Rates with a zero denominator are `0.0`.
+- **Skipped events.** An event missing a required payload key (§1.2) is not used for features and is counted in the extraction report (`skipped_events`, with the missing keys), never silently dropped or raised.
 
 ---
 
