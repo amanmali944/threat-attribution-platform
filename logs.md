@@ -10,11 +10,12 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (60)
-python -m pytest tests -q                    # whole backend suite (119)
+python -m pytest tests/detection -q          # Developer A tests (75)
+python -m pytest tests -q                    # whole backend suite (134)
 
 # Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
 python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
+python -I scripts/adapters/syslog_auth.py <organization-y dir> <output dir> --tenant org-y --year 2025
 ```
 
 ---
@@ -49,7 +50,7 @@ python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --
 
 ## Phase 1 — Real-data corpus & ground truth
 
-**Status:** IN PROGRESS — 1a (Org X) done; 1b–1d pending
+**Status:** IN PROGRESS — 1a (Org X) and 1c (Org Y) done; 1b (labels/splits) and 1d (AIT) pending
 
 ### Decision history
 - The original plan was a seeded synthetic generator (normal activity + four labelled attack scenarios). When this phase was started in the assistant session, that step was **halted by the tool's safety check** and the generator was **not written**; it was not retried or reworded.
@@ -94,10 +95,59 @@ python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --
 
 **Known limitations:** label rules re-implemented against raw lines, not the authors' log2timeline pipeline (approximate); `%` treated as a wildcard; `auth.log` and `syslog` not converted; timestamps from Apache carry an explicit offset (+0700) and are converted correctly, but syslog lines (not converted) have no year or zone.
 
+### 1c — Web Server Log Dataset, Organization Y (same Zenodo record, MIT)
+**Date:** Oct 21, 2026 · **Status:** DONE for the chosen slice
+
+**Looked before downloading (no full download):** Zenodo supports HTTP range requests (confirmed with a 206 response), so I read the zip's directory and profiled selected members remotely — nothing written to disk. Org Y's zip is 390,765,762 bytes, 260 members; 322 MB of it is top-level system logs (including a 2.4 GB `syslog.1` that we do not need).
+
+**What the remote profile showed (this decided what to fetch):**
+| Member | Finding |
+| :--- | :--- |
+| Web access log, first vhost (Apr 27–29) | 50,433 requests, **99.96% from one IP**, 33,181 `POST /wp-login.php` with a different user-agent each time (real web-login brute force from one source) |
+| Four other vhosts' access logs | only 3–4 distinct client IPs each; mostly attack traffic. **Web layer is not entity-diverse.** |
+| `var/log/auth.log` | 775,150 lines, Apr 27 – May 1: **219,382 failed SSH logins from 406 distinct IPs, 2,320 usernames tried**, 33 accepted logins from 9 IPs, 2,191 sudo commands |
+| Ground-truth YAML | 30 rules, incl. the post-compromise chain (sudo commands, web-panel actions, vhost create/delete) |
+
+**Fetched (≈ 5 MB over the network, 130 MB on disk):** the YAML, `auth.log`, and five vhost access logs, into a fresh directory with a path-checked extractor; each member's CRC32 is verified while reading. A transient network error (IncompleteRead) interrupted one run; added retries and a resume mode that skips completed members. Data is git-ignored.
+
+**Adapters:** shared rule code moved to `scripts/adapters/_common.py`; `web_server_logs.py` extended (`--access-glob`, `--app-regex` so the application is the virtual-host name); new `scripts/adapters/syslog_auth.py`:
+- sshd `Failed …` → identity `user_login` FAILURE; sshd `Accepted …` → SUCCESS; sudo commands → endpoint `process_execution` (`process_name: sudo`, so the feature engine counts them as privileged).
+- Skipped **and counted**: sshd "Invalid user" duplicates, PAM duplicates of failures, connection noise, cron, session open/close.
+
+**Conversion results (real data):**
+| Source | Lines | Events | Skipped | Unparsed | Contract problems | Time |
+| :--- | ---: | ---: | ---: | ---: | :---: | ---: |
+| `auth.log` | 775,150 | 221,606 (failed 219,382 · accepted 33 · sudo 2,191) | 553,543 | 1 (NUL padding) | **0** | 34 s |
+| 5 vhost access logs | 173,107 | 173,104 | – | 3 (NUL padding) | **0** | 36 s |
+
+`lines == events + skipped + unparsed` holds exactly for `auth.log`.
+
+**Bugs the real data exposed (all fixed, all now covered by tests):**
+1. sudo lines with a `GROUP=` field were dropped — they are exactly the ownership-change steps of the labelled incident chain.
+2. SSH scanners send usernames that are **empty or contain spaces**; 61 failed logins were silently skipped. Found by an independent raw-file count (the test uses different regexes from the adapter on purpose). Empty usernames are stored as `<empty>`.
+3. Label counts counted rule hits, so an event matching two rules with the same label counted twice. Now counted per event.
+
+**Label picture (rule-derived, see caveats):**
+| Layer | Result |
+| :--- | :--- |
+| SSH | `bruteforce_login_server_attempt` on **every one** of the 219,382 failures. Post-compromise chain labels exist but are tiny: vhost create/delete, mkdir, chmod, chown, file creation — 1–2 events each. |
+| Web | strict `bruteforce_login_web` on 91,378 events (52.8%); moderate rules on only 12. |
+| **Missing** | The rules `bruteforce_login_success` and `ssh_login_success` name the intruder's original IP, but the published logs were re-anonymised afterwards, so **they match nothing**. No event is labelled as "the compromise". The dataset's own description puts the incident at 05:28–07:07 on Apr 29; the first successful root logins appear at 05:34 on Apr 29, which fits only if the syslog clock is UTC (assumed, not proven). |
+
+**First look at real features (not an evaluation):** 80,000 SSH events → 12,588 vectors in 1.1 s, 0 skipped. In that stretch (Apr 27 – early Apr 28) **100% of IP windows are 100% failed logins** — there is no benign class — and one IP made 454 attempts in five minutes against one account.
+
+**Tests:** `test_syslog_auth_adapter.py` (15) + `test_web_server_adapter.py` (14): parsing incl. odd spacing/zone offset, classification of every skip reason, event validity and resolution, sudo counted as privileged, the three bugs above, per-event label counts, byte-for-byte determinism, accounting of every line, and a real-data check against an independent count of the raw file. Detection suite: **75 passed**; whole backend: **134 passed**. Mutation check (username regex, `GROUP=` support, UTC-offset sign, per-hit label counting): **all 4 caught**.
+
+**What this data can and cannot do:**
+- ✔ A real identity layer with entity diversity (406 source IPs, 2,320 usernames), real brute force, successful logins, post-compromise privileged commands, and real web-login brute force — the first data here that can exercise entity-level features and the attack-path / entry-point work.
+- ✘ It is almost entirely hostile traffic: very little benign activity to learn "normal" from (33 successful logins, cron-driven sudo). A baseline "fitted on normal" is thin in the identity layer.
+- ✘ "Brute force" labels are trivially separable; the meaningful target is **the incident** (success after failures, then privileged commands), whose labels are weak. Any detection score on the brute-force labels must not be presented as detection quality.
+- ✘ Still no database or cloud layer.
+- The Org Y IPs look real (not anonymised like Org X). They stay in the git-ignored `data/external/` and are deliberately not quoted in the docs.
+
 ### Next in Phase 1
-- **1c first check:** before downloading Org Y (390.8 MB), read just its access-log member to see whether client IPs are diverse (Org X's single proxy IP would make it useless for entity features too).
-- **1b:** event labels → window labels; time-ordered baseline / train / validation / test splits.
-- **1d:** AIT-LDS v2.0 `russellmitchell` slice (labelled multi-source, multi-step attack; 7.1 GB zip, so extract only chosen members).
+- **1b:** event labels → window labels; define the incident target explicitly (window + entity); time-ordered baseline / train / validation / test splits.
+- **1d:** AIT-LDS v2.0 `russellmitchell` slice (labelled multi-source, multi-step attack with per-line step labels; 7.1 GB zip, so range-read and extract only chosen members) — the better source of benign activity and a cleaner attack chain.
 
 ---
 

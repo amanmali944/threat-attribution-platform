@@ -93,7 +93,7 @@ The original plan was a seeded synthetic generator. That route was dropped; v1 u
 | Item | Detail |
 | :--- | :--- |
 | **Approach** | One adapter per dataset in `scripts/adapters/`. Raw and derived data live in `data/external/` (git-ignored; some licences are non-commercial / share-alike). Labels go in a **sidecar** file, never inside events. Every run records dataset version, file checksums and rules checksum |
-| **Steps** | **1a** Web Server Log Dataset, Org X (2.1 MB, MIT): plumbing + application layer — **done** · **1b** event→window labels and time-ordered baseline / train / validation / test splits · **1c** Org Y (391 MB, a real privilege-escalation chain): first check client-IP diversity · **1d** AIT-LDS v2.0 `russellmitchell` slice: multi-source, multi-step attack with per-line step labels |
+| **Steps** | **1a** Web Server Log Dataset, Org X (2.1 MB, MIT): plumbing + application layer — **done** · **1b** event→window labels and time-ordered baseline / train / validation / test splits · **1c** Org Y (SSH `auth.log` + five web vhost logs fetched by range request, ~5 MB; real brute force, successful logins, post-compromise sudo) — **done** · **1d** AIT-LDS v2.0 `russellmitchell` slice: multi-source, multi-step attack with per-line step labels |
 | **Layer coverage** | identity, application, network, endpoint (partly). **No database or cloud layer** — no public labelled data exists; both are reported as unvalidated |
 | **Outputs** | `scripts/adapters/*.py`, derived data under `data/external/**/derived/` (not committed), small committed fixtures only |
 | **Acceptance tests** | Every source line accounted for (`events + unparsed == lines`) · all events pass `validate_event` · byte-identical output on rerun · ground-truth checksum recorded · mutation-checked tests |
@@ -244,7 +244,7 @@ Blocking or automated response, full graph database, graph neural networks, more
 | Phase | Status | Notes |
 | :--- | :--- | :--- |
 | 0 — Setup & contract | **Done** (Oct 21, 2026) | Contract + plan committed; CR-01 … CR-07 delivered by Developer B and verified on `main`; platform runs locally, 59/59 platform tests pass |
-| 1 — Real-data corpus & ground truth | **In progress** | 1a Org X done (213,205 events, 0 contract problems; but one client IP, so plumbing only). 1b–1d pending. Entity-level training/evaluation still needs 1c/1d |
+| 1 — Real-data corpus & ground truth | **In progress** | 1a Org X done (plumbing only: one client IP). 1c Org Y done: 221,606 SSH/sudo events (406 source IPs) + 173,104 web events, 0 contract problems; almost all hostile traffic and no label for the compromise itself. 1b (window labels, splits) and 1d (AIT) pending |
 | 2 — Resolution & features | **Done** (Oct 21, 2026) | 22 features, entity resolution, baseline; 46 tests pass; see `logs.md` |
 | 3 — Detectors | Not started | |
 | 4 — Fusion & calibration | Not started | |

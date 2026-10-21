@@ -1,12 +1,17 @@
-"""Adapter: Apache access logs + ground-truth rules -> canonical events + label sidecar.
+"""Adapter: Apache / OpenLiteSpeed access logs + ground-truth rules -> canonical events + label sidecar.
 
 Built for the "Web Server Log Dataset" (Zenodo 10.5281/zenodo.20001206, MIT licence):
 real web-server logs from two public-sector organisations, with ground truth given as
 text-pattern rules rather than per-line labels.
 
-    python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
+    # Organization X (one rotated log set)
+    python -I scripts/adapters/web_server_logs.py <organization-x dir> <out dir> --tenant org-x
 
-Outputs (all inside <output dir>):
+    # Organization Y (one access log per virtual host; application = the vhost name)
+    python -I scripts/adapters/web_server_logs.py <organization-y dir> <out dir> --tenant org-y \\
+        --access-glob "log/home/*/logs/*.access_log*" --app-regex "home/([^/]+)/logs/"
+
+Outputs (all inside <out dir>):
     events.jsonl   canonical events (docs/EVENT_SCHEMA.md), one per access-log line
     labels.jsonl   one record per labelled event; kept OUT of the events so a detector
                    never sees them
@@ -27,24 +32,24 @@ from __future__ import annotations
 
 import argparse
 import glob
-import gzip
 import hashlib
 import json
 import os
 import re
 import sys
 from collections import Counter
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import yaml  # noqa: E402
-
+from _common import Rule, label_line, load_rules, open_text  # noqa: E402,F401
 from app.services.detection import contract as C  # noqa: E402
 from app.services.detection.resolve import iso_utc  # noqa: E402
+
+_open_text = open_text  # kept for callers that used the old private name
 
 DATASET = "wsld"  # prefix for event IDs
 APPLICATION = "web-application"
@@ -96,8 +101,14 @@ def canonical_file_name(path: str) -> str:
     return name[:-3] if name.endswith(".gz") else name
 
 
-def to_event(record: Dict[str, Any], tenant: str, source_file: str, lineno: int) -> Dict[str, Any]:
-    entities = [{"entity_type": "application", "identifier": APPLICATION}]
+def to_event(
+    record: Dict[str, Any],
+    tenant: str,
+    source_file: str,
+    lineno: int,
+    application: str = APPLICATION,
+) -> Dict[str, Any]:
+    entities = [{"entity_type": "application", "identifier": application}]
     if record["user"]:
         entities.insert(0, {"entity_type": "user", "identifier": record["user"]})
     payload = {
@@ -123,58 +134,7 @@ def to_event(record: Dict[str, Any], tenant: str, source_file: str, lineno: int)
     }
 
 
-# --------------------------------------------------------------------------- labels
-
-
-@dataclass(frozen=True)
-class Rule:
-    rule_id: str
-    label: str
-    sensitivity: str
-    patterns: Tuple["re.Pattern[str]", ...]
-
-
-def _compile(pattern: Any) -> "re.Pattern[str]":
-    pieces = [re.escape(piece) for piece in str(pattern).split("%")]
-    return re.compile(".*".join(pieces), re.IGNORECASE | re.DOTALL)
-
-
-def load_rules(path: str) -> List[Rule]:
-    with open(path, "rt", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or []
-    rules = []
-    for item in data:
-        rules.append(
-            Rule(
-                rule_id=str(item["id"]),
-                label=str(item["ground_truth_label"]),
-                sensitivity=str(item.get("sensitivity", "moderate")),
-                patterns=tuple(_compile(p) for p in item["filter"]),
-            )
-        )
-    return rules
-
-
-def label_line(line: str, status_code: int, rules: Sequence[Rule]) -> Dict[str, List[Dict[str, str]]]:
-    """Rule hits for one log line, split by sensitivity (all patterns of a rule must match)."""
-    text = f"{line.rstrip(chr(13) + chr(10))} code: {status_code}"
-    hits: Dict[str, List[Dict[str, str]]] = {"moderate": [], "strict": []}
-    for rule in rules:
-        if all(p.search(text) for p in rule.patterns):
-            bucket = "strict" if rule.sensitivity == "strict" else "moderate"
-            entry = {"rule_id": rule.rule_id, "label": rule.label}
-            if entry not in hits[bucket]:
-                hits[bucket].append(entry)
-    return hits
-
-
 # --------------------------------------------------------------------------- conversion
-
-
-def _open_text(path: str):
-    if path.endswith(".gz"):
-        return gzip.open(path, "rt", encoding="utf-8", errors="replace")
-    return open(path, "rt", encoding="utf-8", errors="replace")
 
 
 def _rotation_index(path: str) -> int:
@@ -183,7 +143,13 @@ def _rotation_index(path: str) -> int:
     return int(match.group(1)) if match and match.group(1) else 0
 
 
-def access_log_files(org_dir: str) -> List[str]:
+def access_log_files(org_dir: str, access_glob: Optional[str] = None) -> List[str]:
+    """Access logs to convert. Default: Org X layout, oldest rotation first.
+
+    With ``access_glob`` (relative to ``org_dir``) the files are returned sorted by path.
+    """
+    if access_glob:
+        return sorted(glob.glob(os.path.join(org_dir, access_glob)))
     found = glob.glob(os.path.join(org_dir, "log", "apache2", "web-access.log*"))
     return sorted(found, key=lambda p: (-_rotation_index(p), p))  # oldest first
 
@@ -201,10 +167,13 @@ def convert(
     tenant: str,
     rules_path: Optional[str] = None,
     limit: Optional[int] = None,
+    access_glob: Optional[str] = None,
+    app_regex: Optional[str] = None,
 ) -> Dict[str, Any]:
     rules_path = rules_path or find_rules_file(org_dir)
     rules = load_rules(rules_path)
-    files = access_log_files(org_dir)
+    files = access_log_files(org_dir, access_glob)
+    app_pattern = re.compile(app_regex) if app_regex else None
     os.makedirs(out_dir, exist_ok=True)
 
     totals = Counter()
@@ -214,6 +183,7 @@ def convert(
     labels_strict: Counter = Counter()
     statuses: Counter = Counter()
     ips: Counter = Counter()
+    applications: Counter = Counter()
     first = last = None
     per_file: List[Dict[str, Any]] = []
 
@@ -221,8 +191,13 @@ def convert(
          open(os.path.join(out_dir, "labels.jsonl"), "w", encoding="utf-8", newline="\n") as labels_out:
         for path in files:
             source_file = canonical_file_name(path)
+            application = APPLICATION
+            if app_pattern is not None:
+                found = app_pattern.search(os.path.relpath(path, org_dir).replace(os.sep, "/"))
+                if found:
+                    application = found.group(1)
             file_lines = file_events = 0
-            with _open_text(path) as handle:
+            with open_text(path) as handle:
                 for lineno, line in enumerate(handle, start=1):
                     if limit is not None and totals["events"] >= limit:
                         break
@@ -235,7 +210,7 @@ def convert(
                             unparsed_samples.append(f"{source_file}:{lineno}: {line.strip()[:200]}")
                         continue
 
-                    event = to_event(record, tenant, source_file, lineno)
+                    event = to_event(record, tenant, source_file, lineno, application)
                     for problem in C.validate_event(event):
                         problems[problem] += 1
                     events_out.write(json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n")
@@ -254,19 +229,20 @@ def convert(
                         )
                     if hits["moderate"]:
                         totals["labelled_moderate"] += 1
-                        for hit in hits["moderate"]:
-                            labels_moderate[hit["label"]] += 1
+                        for label in {h["label"] for h in hits["moderate"]}:   # per event, not per rule hit
+                            labels_moderate[label] += 1
                     if hits["strict"]:
                         totals["labelled_strict"] += 1
-                        for hit in hits["strict"]:
-                            labels_strict[hit["label"]] += 1
+                        for label in {h["label"] for h in hits["strict"]}:
+                            labels_strict[label] += 1
 
                     statuses[str(record["status_code"])] += 1
                     ips[record["ip"]] += 1
+                    applications[application] += 1
                     moment = record["observed_at"]
                     first = moment if first is None or moment < first else first
                     last = moment if last is None or moment > last else last
-            per_file.append({"file": source_file, "lines": file_lines, "events": file_events})
+            per_file.append({"file": source_file, "application": application, "lines": file_lines, "events": file_events})
 
     with open(rules_path, "rb") as handle:
         rules_sha = hashlib.sha256(handle.read()).hexdigest()
@@ -286,6 +262,7 @@ def convert(
         "last_event": iso_utc(last) if last else None,
         "distinct_client_ips": len(ips),
         "top_client_ips": ips.most_common(5),
+        "events_per_application": dict(sorted(applications.items())),
         "status_codes": dict(sorted(statuses.items())),
         "labelled_events_moderate": totals["labelled_moderate"],
         "labelled_events_strict": totals["labelled_strict"],
@@ -306,9 +283,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--tenant", required=True, help="tenant_id to stamp on every event, e.g. org-x")
     parser.add_argument("--rules", default=None, help="ground-truth yaml (default: first under ground-truth/)")
     parser.add_argument("--limit", type=int, default=None, help="stop after N events (smoke tests)")
+    parser.add_argument("--access-glob", default=None, help="access-log glob relative to org_dir (default: Org X layout)")
+    parser.add_argument("--app-regex", default=None, help="regex over the relative log path; group 1 = application name")
     args = parser.parse_args(argv)
 
-    report = convert(args.org_dir, args.out_dir, args.tenant, args.rules, args.limit)
+    report = convert(args.org_dir, args.out_dir, args.tenant, args.rules, args.limit, args.access_glob, args.app_regex)
     print(json.dumps({k: v for k, v in report.items() if k not in ("files",)}, indent=2, sort_keys=True))
     return 0
 
