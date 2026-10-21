@@ -158,6 +158,42 @@ def fused_labels(fused, windows) -> Dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+def pooled(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Sums over folds (every window once): operating points, decisions, alert volume, calibration."""
+    days = sum(r["test_days"] for r in rows)
+    ops = {}
+    for name in rows[0]["operating_points"]:
+        tp = sum(r["operating_points"][name]["hostile_flagged"] for r in rows)
+        total = sum(r["operating_points"][name]["hostile_total"] for r in rows)
+        fp = sum(r["operating_points"][name]["false_alarms"] for r in rows)
+        ops[name] = {"hostile_flagged": tp, "hostile_total": total, "false_alarms": fp,
+                     "recall": round(tp / total, 4) if total else None,
+                     "precision": round(tp / (tp + fp), 4) if tp + fp else None,
+                     "false_alarms_per_day": round(fp / days, 2)}
+    n = sum(r["calibration_on_test"]["n"] for r in rows)
+    aps = {k: [r["ranking"][k]["average_precision"] for r in rows if r["ranking"][k]["average_precision"] is not None]
+           for k in rows[0]["ranking"]}
+    stage = {}
+    for s in STAGES:
+        present = [r for r in rows if r["recall_by_stage"]["pipeline_alert_or_review"].get(s)]
+        stage[s] = f"{sum(1 for r in present if r['recall_by_stage']['pipeline_alert_or_review'][s]['detected'])}/{len(present)}"
+    return {
+        "folds": len(rows), "test_days": days, "operating_points": ops,
+        "median_average_precision": {k: (sorted(v)[len(v) // 2] if v else None) for k, v in aps.items()},
+        "folds_where_fusion_ap_beats_rules_any": sum(
+            1 for r in rows if (r["ranking"]["fusion"]["average_precision"] or 0) > (r["ranking"]["rules_any"]["average_precision"] or 0)),
+        "ece_weighted": round(sum(r["calibration_on_test"]["ece"] * r["calibration_on_test"]["n"] for r in rows) / n, 4),
+        "brier_weighted": round(sum(r["calibration_on_test"]["brier"] * r["calibration_on_test"]["n"] for r in rows) / n, 6),
+        "pipeline_stages_detected_alert_or_review": stage,
+        "alerts_per_day": {k: round(sum(r["alert_volume_per_day"][k] * r["test_days"] for r in rows) / days, 2)
+                           for k in rows[0]["alert_volume_per_day"] if k != "suppressed_duplicates"},
+        "suppressed_duplicates": sum(r["alert_volume_per_day"]["suppressed_duplicates"] for r in rows),
+    }
+
+
+DEVELOPMENT = ("russellmitchell", "fox")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("dumps_dir")
@@ -165,6 +201,9 @@ def main() -> int:
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--variant", default="asis", choices=["asis", "clean"])
     parser.add_argument("--model", default="logreg", choices=["logreg", "hgb"])
+    parser.add_argument("--final-model", default=None,
+                        help="also fit on ALL listed scenarios and write the calibration artefact (json) here; "
+                             "the fitted model goes next to it as .joblib")
     args = parser.parse_args()
     started = time.perf_counter()
 
@@ -188,10 +227,33 @@ def main() -> int:
         "protocol": "leave-one-scenario-out over the listed scenarios; fusion fit on the others, test scored once",
         "variant": args.variant, "model": args.model, "scenarios": args.scenarios,
         "suppression_seconds": SUPPRESSION_SECONDS, "folds": folds,
+        "pooled": {group: pooled([folds[s] for s in args.scenarios if (s in DEVELOPMENT) == (group == "development")])
+                   for group in ("development", "held-out")
+                   if any((s in DEVELOPMENT) == (group == "development") for s in args.scenarios)},
         "seconds": round(time.perf_counter() - started, 1),
     }
+    for group, body in results["pooled"].items():
+        print(f"-- pooled {group}: " + json.dumps({k: body["operating_points"][k] for k in
+                                                  ("rules any", "fusion alert", "pipeline alert", "pipeline alert|review")}))
     os.makedirs(os.path.dirname(os.path.abspath(args.results)), exist_ok=True)
     Path(args.results).write_text(json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if args.final_model:
+        import joblib
+        everything = [w for s in args.scenarios for w in data[s]]
+        final = FusionModel(model=args.model).fit(everything, [w["scenario"] for w in everything])
+        artefact = final.metadata() | {
+            "trained_on": args.scenarios, "variant": args.variant,
+            "detector_versions": sorted({f"{w['ruleset']} / {w['iforest_version']} / {w['feature_set_version']}"
+                                         for w in everything}),
+            "decision_policy": "rules_first (fusion.rules_first): high rule -> alert; other rule -> at least review",
+            "evaluation": args.results,
+        }
+        out = Path(args.final_model)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(artefact, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        models = Path("data/external/models")
+        models.mkdir(parents=True, exist_ok=True)
+        joblib.dump(final, models / f"{artefact['fusion_version']}-{args.model}.joblib")
     return 0
 
 

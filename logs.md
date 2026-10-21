@@ -671,8 +671,8 @@ New: rolling history, the login-history gate (both sides of the limit, failed lo
 
 ---
 
-## Phase 4 — Fusion, calibration, alert-fatigue controls (design; final evaluation pending)
-**Date:** Oct 21, 2026 · **Status:** design frozen on the development scenarios; leave-one-scenario-out over all 8 next
+## Phase 4 — Fusion, calibration, alert-fatigue controls
+**Date:** Oct 21, 2026 · **Status:** DONE (design frozen on the development scenarios, then evaluated leave-one-scenario-out over all 8)
 
 ### What was built
 | File | What it does |
@@ -693,6 +693,38 @@ What went wrong and what was changed: `russellmitchell`'s hostile windows are 94
 
 **Pre-registered pipeline decision (before any held-out score): rules first.** A high-severity rule hit → alert; any other rule hit → at least review; otherwise fusion decides. Fusion may add alerts and reviews, never silence a rule. Pure fusion and the pipeline decision are both reported.
 
+### Final evaluation: leave-one-scenario-out over all 8 (each fold: fusion trained and calibrated on the other 7, the eighth scored once)
+Hostile = incident + exfiltration windows. Pooled over the 6 held-out folds (180 hostile windows, 8 test days):
+
+| Decision | Hostile windows | Recall | Precision | False alarms / day |
+| :--- | ---: | ---: | ---: | ---: |
+| Rules (rules-1.2.0), any | 156 / 180 | 0.867 | **0.981** | **0.38** |
+| Rules, high severity | 135 / 180 | 0.750 | 1.000 | 0.00 |
+| Before fusion (rules any OR IF ≥ 0.999) | 157 / 180 | 0.872 | 0.929 | 1.50 |
+| **Fusion (logistic regression), alert** = pipeline (rules first) | 158 / 180 | 0.878 | 0.888 | 2.50 |
+| Fusion challenger (gradient boosting), alert | 157 / 180 | 0.872 | 0.766 | 6.00 |
+
+| Measure (held-out folds) | Logistic regression | Gradient boosting |
+| :--- | ---: | ---: |
+| Median PR-AUC: fusion / rules any / IF / event count | **0.681** / 0.626 / 0.155 / 0.199 | 0.651 / 0.626 / 0.155 / 0.199 |
+| Folds where fusion ranks better than rules (PR-AUC) | **6 / 6** | 6 / 6 |
+| Calibration on the held-out fold: ECE / Brier | **0.0019** / 0.0021 | 0.0019 / 0.0021 |
+| Alert volume: flagged windows → Fused Alerts after folding (per day) | 22.3 → **6.4** (127 repeats folded) | 30.4 → 12.9 |
+| Stages detected (pipeline) | entry 6/6, discovery 5/6, web 6/6, privilege 6/6 | same |
+
+### What the numbers mean
+1. **Fusion ranks better than every single detector in every held-out fold, and its confidence is well calibrated** (a stated 0.99 is right ~99 % of the time). That makes it the right tool for *ordering* the analyst queue and for the confidence shown on each alert.
+2. **At the operating point it does not beat the rules.** It adds 2 hostile windows for 17 more false alarms (0.38 → 2.5 per day). The acceptance bar in the plan was "beat the best single detector on PR-AUC *and* on alerts per day at equal recall": met on PR-AUC, **not met on alerts per day**. Reported as such.
+3. **Alert fatigue is handled by folding, not by fusion:** 22 flagged windows a day become 6.4 Fused Alerts (one per entity per burst, repeats counted in `suppressed_duplicates`).
+4. **The review band is empty on this data.** Isotonic calibration on AIT collapses confidence to two levels (≈ 0.002 and ≈ 0.99), so τ_review = τ_alert. With one attack family, windows are either clearly hostile or clearly benign; the abstain path is implemented and tested but not exercised here.
+5. **Gradient boosting (challenger) is worse** (6 false alarms/day) — logistic regression stays.
+6. **Recommendation for the pipeline (not a measured result):** keep rules-first; attach the fusion confidence to every alert for ranking; send fusion-only detections (no rule hit) to *review* instead of *alert*. Measuring that variant honestly needs data not used here.
+
+### Artefacts
+- `data/evaluation/phase4_fusion_loso_{logreg,hgb}.json` — every fold (model, thresholds, coefficients, reliability bins, decisions, recall by class and stage, alert volume) and the pooled tables.
+- `data/evaluation/calibration.json` — the final model fitted on all 8 scenarios (`fusion-1.0.0`, `cal-1.0.0`): thresholds τ_alert = τ_review = 0.023, coefficients (largest: IF score 1.93, rule count 1.08, high rule 0.43, privileged ops 0.35), out-of-fold reliability (in-sample for the calibrator, so the honest ECE is the held-out-fold figure above). Model file in the git-ignored `data/external/models/`.
+- Tests: `test_fusion.py` (13), `test_phase4_results.py` (7: each fold trains on the other seven, pooled = sum of folds, the pipeline never flags fewer hostile windows than rules alone, artefact fields). **Mutation check 7 / 7** (one gap — the review band — found and closed).
+
 ---
 
 ## ML strategy (decision recorded Oct 21, 2026)
@@ -704,7 +736,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 ## Next
 
 1. ~~Held-out evaluation~~ done (Phase 3e).
-2. **Phase 4 final:** fusion leave-one-scenario-out over all 8 (design frozen), calibration artefact, alerts per day before / after.
+2. ~~Phase 4 final~~ done.
 3. **Phase 5 correlation** using the asset inventories (address → host, FQDN → host) to link the VPN login, the web / DNS activity and the privilege steps into one incident; **Phase 6 attribution** (entry point, path, reach).
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).
