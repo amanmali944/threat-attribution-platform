@@ -244,7 +244,7 @@ Blocking or automated response, full graph database, graph neural networks, more
 | Phase | Status | Notes |
 | :--- | :--- | :--- |
 | 0 — Setup & contract | **Done** (Oct 21, 2026) | Contract + plan committed; CR-01 … CR-07 delivered by Developer B and verified on `main`; platform runs locally, 59/59 platform tests pass |
-| 1 — Real-data corpus & ground truth | **In progress** | 1a Org X done (plumbing only: one client IP). 1c Org Y done: 221,606 SSH/sudo events (406 source IPs) + 173,104 web events, 0 contract problems; almost all hostile traffic and no label for the compromise itself. 1b (window labels, splits) and 1d (AIT) pending |
+| 1 — Real-data corpus & ground truth | **In progress** | 1a Org X done (plumbing only: one client IP). 1c Org Y done: 221,606 SSH/sudo events (406 source IPs) + 173,104 web events, 0 contract problems; almost all hostile traffic and no label for the compromise itself. 1b done for Org Y: incident / background / unknown window labels, time-ordered splits (21 incident windows, all in test; one incident, so zero-shot evaluation only). 1d (AIT) pending — required for supervised fusion |
 | 2 — Resolution & features | **Done** (Oct 21, 2026) | 22 features, entity resolution, baseline; 46 tests pass; see `logs.md` |
 | 3 — Detectors | Not started | |
 | 4 — Fusion & calibration | Not started | |

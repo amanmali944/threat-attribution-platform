@@ -10,12 +10,13 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (75)
-python -m pytest tests -q                    # whole backend suite (134)
+python -m pytest tests/detection -q          # Developer A tests (91)
+python -m pytest tests -q                    # whole backend suite (150)
 
 # Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
 python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
 python -I scripts/adapters/syslog_auth.py <organization-y dir> <output dir> --tenant org-y --year 2025
+python -I scripts/build_org_y_windows.py <derived auth dir> data/specs/org_y_incident.json <windows dir>
 ```
 
 ---
@@ -50,7 +51,7 @@ python -I scripts/adapters/syslog_auth.py <organization-y dir> <output dir> --te
 
 ## Phase 1 — Real-data corpus & ground truth
 
-**Status:** IN PROGRESS — 1a (Org X) and 1c (Org Y) done; 1b (labels/splits) and 1d (AIT) pending
+**Status:** IN PROGRESS — 1a (Org X), 1c (Org Y) and 1b (labels/splits for Org Y) done; 1d (AIT) pending
 
 ### Decision history
 - The original plan was a seeded synthetic generator (normal activity + four labelled attack scenarios). When this phase was started in the assistant session, that step was **halted by the tool's safety check** and the generator was **not written**; it was not retried or reworded.
@@ -145,9 +146,46 @@ python -I scripts/adapters/syslog_auth.py <organization-y dir> <output dir> --te
 - ✘ Still no database or cloud layer.
 - The Org Y IPs look real (not anonymised like Org X). They stay in the git-ignored `data/external/` and are deliberately not quoted in the docs.
 
+### 1b — Window labels, incident target and time-ordered splits (Org Y)
+**Date:** Oct 21, 2026 · **Status:** DONE
+
+**First, what the ground truth actually looks like** (timeline built from the converted events, IPs replaced by tags):
+- **None of the 33 accepted logins came from an IP that had failed before.** The intruder logged in as root with a valid password on the first try — "success after brute force" is *not* the pattern here.
+- First accepted root login 05:34:30 Apr 29; two source IPs log in as root between 05:34 and 06:12 (incl. two public-key logins at 06:11, i.e. a key was installed).
+- **Privileged-command burst:** sudo (root→root) runs at ~1 per hour every hour, then **334 in the 06:00 hour**, plus commands as two newly created site users. All 13 rule-labelled post-compromise steps (create site → mkdir → chmod → chown → copy files → delete site, twice) fall between 06:09:07 and 07:08:46.
+- After 07:10: more root logins from other IPs and a second account (`iisti9694`) on Apr 29–30. The ground truth does not say whether these are benign or malicious.
+
+**Definitions (code: `backend/app/services/detection/labeling.py`; spec: `data/specs/org_y_incident.json`, committed, no IPs):**
+| Term | Definition |
+| :--- | :--- |
+| Routine sudo command | Digit-normalised command seen in ≥ 20 distinct hours of the pre-incident period (baseline + train). Learned from earlier data only. Found 3 (cron-driven log reads and a `chown` of the panel directory). |
+| Notable event | A successful login, or a sudo command that is not routine |
+| Incident event | A notable event inside the documented incident interval 2025-04-29 05:28–07:10 (dataset description 05:28–07:07; last labelled step 07:08:46; UTC assumed) |
+| Window label | `incident` if it contains an incident event · `unknown` if it contains a notable event outside the interval (**excluded from scoring**, not counted as benign) · `background` otherwise |
+
+**Splits (time-ordered, half-open, aligned to the 300 s window so no window can straddle a boundary; the spec loader refuses an incident that touches baseline / train / validation):**
+| Split | Period (UTC) | Use | Windows | incident | unknown |
+| :--- | :--- | :--- | ---: | ---: | ---: |
+| baseline | Apr 27 | fit the feature baseline only (66,177 events), not scored | – | – | – |
+| train | Apr 28 | fit unsupervised models on background | 11,889 | 0 | 0 |
+| validation | Apr 29 00:00–04:00 | thresholds / alert budget from background | 581 | 0 | 0 |
+| gap | Apr 29 04:00–05:00 | excluded | 140 | 0 | 0 |
+| test | Apr 29 05:00 – May 1 00:30 | evaluation | 15,752 | **21** | 50 |
+
+Incident windows by entity type: 10 user, 6 host, 5 IP. Notable events: 356 incident, 42 unknown. Build time 18.7 s (one UTC day at a time to keep memory low). Outputs in `data/external/.../derived/org-y/windows/` (git-ignored): `train/validation/test.jsonl`, `baseline.json` (entity IDs are hashes), `dataset_report.json`.
+
+**Cross-check against the ground truth:** all 13 rule-labelled post-compromise commands are classified `incident` by the definition above (13 / 13).
+
+**Tests (`test_labeling.py`, 16 passed):** spec validation (rejects incidents overlapping train or validation, incidents running past the test end, misaligned or overlapping splits, missing splits), half-open split membership incl. a straddling window, routine-command learning (distinct hours, digit normalisation, period limits), event classes, label precedence (incident > unknown > background), an end-to-end check that labels follow entities (noise during the incident stays background), and a real-data check over all ~28,000 written windows (no incident outside test, every window inside its split, labels never inside features, counts equal the report). **Mutation check: 5 / 5 caught** (leakage guard removed, routine threshold off by one, precedence swapped, split check ignoring window end, every notable event called incident). Whole backend suite: **150 passed**.
+
+**Limits that must travel with any result from this data:**
+1. **One incident.** Org Y supports a *zero-shot* evaluation of unsupervised and rule detectors (train on background, score the test period). It **cannot train or calibrate** a supervised fusion model for incident detection: there are no incident windows outside the test split, by design. With n = 1 incident, any recall figure is a single observation, not an estimate.
+2. **The incident's shape was seen while defining the labels** (the sudo burst, logins without prior failures). Rules or thresholds tuned after this would be fitted to the test incident. Therefore: thresholds come only from train / validation background, rules must be justified as generic behaviour, and Org Y results will be reported as *optimistic (incident seen during labelling)*.
+3. Time zone assumed UTC; the incident interval depends on it.
+4. 50 test windows are `unknown` and excluded; if some of them are malicious, recall is overstated, and if benign, false-alarm rates are understated.
+
 ### Next in Phase 1
-- **1b:** event labels → window labels; define the incident target explicitly (window + entity); time-ordered baseline / train / validation / test splits.
-- **1d:** AIT-LDS v2.0 `russellmitchell` slice (labelled multi-source, multi-step attack with per-line step labels; 7.1 GB zip, so range-read and extract only chosen members) — the better source of benign activity and a cleaner attack chain.
+- **1d:** AIT-LDS v2.0 slice (8 scenarios, each a labelled multi-step attack with per-line labels and days of benign activity) — needed for anything supervised (scenario-level splits, leave-one-scenario-out) and for a fair, not-seen-before evaluation. 7.1–26.5 GB zips, so range-read and extract only chosen members.
 
 ---
 
@@ -218,8 +256,6 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. Phase 1c — check Org Y's client-IP diversity (read one member only) before downloading 391 MB.
-2. Phase 1b — window labels and time-ordered splits.
-3. Phase 3a — rules engine (needs only features; every rule gets a passing and a failing test).
-4. Phase 3b/3c — Isolation Forest and sequence model *mechanics* (fit/score separation, ECDF scoring, determinism) can be built and unit-tested now; training and evaluation need an entity-diverse dataset (Org Y or AIT).
-5. Phase 1d — AIT-LDS `russellmitchell` slice.
+1. Phase 3a — rules engine (every rule gets a passing and a failing test; thresholds from train/validation background only).
+2. Phase 3b — Isolation Forest trained on Org Y train background, scored zero-shot on the test period (first end-to-end number, reported with the limits above).
+3. Phase 1d — AIT-LDS slice, required before any supervised fusion (Phase 4).
