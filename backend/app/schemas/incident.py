@@ -11,6 +11,13 @@ class IncidentCreate(BaseModel):
     assigned_to: Optional[str] = Field(None, example="analyst@corp.com")
     alert_ids: Optional[List[str]] = Field(default_factory=list)
 
+    # Developer A Analytical Extension Fields (CR-04)
+    risk_score: Optional[float] = Field(None, example=91.4)
+    risk_level: Optional[str] = Field(None, example="critical")
+    layers: Optional[List[str]] = Field(default_factory=list)
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
+
 class IncidentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -21,6 +28,14 @@ class IncidentResponse(BaseModel):
     severity: str
     status: str
     assigned_to: Optional[str] = None
+
+    # Developer A Analytical Extension Fields (CR-04)
+    risk_score: Optional[float] = None
+    risk_level: Optional[str] = None
+    layers: Optional[List[str]] = None
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
+
     created_at: datetime
     updated_at: datetime
 

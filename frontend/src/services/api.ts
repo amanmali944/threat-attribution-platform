@@ -83,6 +83,9 @@ export interface DashboardSummary {
   open_incidents: number;
   critical_alerts: number;
   top_threat_actors: string[];
+  attribution_confidence_mean?: number;
+  blast_radius_index?: string;
+  blast_radius_score?: number;
   last_updated: string;
 }
 
@@ -96,6 +99,16 @@ export interface AlertItem {
   status: string;
   observed_at: string;
   created_at: string;
+  // Developer A Analytical Extension Fields (CR-03)
+  detector?: string | null;
+  detector_version?: string | null;
+  technique?: string | null;
+  technique_id?: string | null;
+  entity_id?: string | null;
+  score?: number | null;
+  confidence?: number | null;
+  decision?: string | null;
+  evidence?: any;
 }
 
 export interface AlertListResponse {
@@ -113,6 +126,11 @@ export interface IncidentItem {
   severity: string;
   status: string;
   assigned_to: string;
+  risk_score?: number | null;
+  risk_level?: string | null;
+  layers?: string[];
+  first_seen?: string | null;
+  last_seen?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -122,6 +140,26 @@ export interface IncidentListResponse {
   limit: number;
   offset: number;
   items: IncidentItem[];
+}
+
+export interface EvaluationSummary {
+  model_version: string;
+  overall_precision: number;
+  overall_recall: number;
+  overall_f1: number;
+  calibration?: {
+    brier_score: number;
+    expected_calibration_error: number;
+    max_calibration_error: number;
+    auc_roc: number;
+  };
+  attribution?: {
+    entry_point_accuracy?: number;
+    path_precision?: number;
+    path_recall?: number;
+    reached_assets_jaccard?: number;
+  };
+  [key: string]: any;
 }
 
 /** Auth APIs */
@@ -138,6 +176,12 @@ export const dashboardApi = {
     api.get<DashboardSummary>('/dashboard/summary', { params: { tenant_id: tenantId } }),
 };
 
+/** Evaluation APIs */
+export const evaluationApi = {
+  summary: (tenantId?: string) =>
+    api.get<EvaluationSummary>('/evaluation/summary', { params: tenantId ? { tenant_id: tenantId } : {} }),
+};
+
 /** Alert APIs */
 export const alertsApi = {
   list: (tenantId: string, params?: Record<string, string | number>) =>
@@ -148,4 +192,59 @@ export const alertsApi = {
 export const incidentsApi = {
   list: (tenantId: string, params?: Record<string, string | number>) =>
     api.get<IncidentListResponse>('/incidents', { params: { tenant_id: tenantId, ...params } }),
+};
+
+// ─── Graph / Attack Topology Types ──────────────────────────────────────────
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: string;
+  properties?: Record<string, any>;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  relation: string;
+  weight: number;
+}
+
+export interface PatientZero {
+  id?: string;
+  entity_id?: string;
+  entity_type?: string;
+  label?: string;
+  identifier?: string;
+  type?: string;
+  first_seen?: string;
+  observed_at?: string;
+  confidence?: number;
+  first_anomalous_event_id?: string;
+}
+
+export interface BlastRadius {
+  total_entities?: number;
+  reached_count?: number;
+  potential_reach_count?: number;
+  affected_hosts?: number;
+  affected_users?: number;
+  affected_ips?: number;
+  score?: number;
+}
+
+export interface IncidentGraphResponse {
+  incident_id: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  patient_zero: PatientZero | null;
+  blast_radius: BlastRadius | null;
+}
+
+/** Graph / Attack Topology APIs */
+export const graphApi = {
+  getIncidentGraph: (incidentId: string, tenantId?: string) =>
+    api.get<IncidentGraphResponse>(`/incidents/${incidentId}/graph`, {
+      params: tenantId ? { tenant_id: tenantId } : {},
+    }),
 };
