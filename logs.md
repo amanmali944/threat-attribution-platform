@@ -727,6 +727,38 @@ Hostile = incident + exfiltration windows. Pooled over the 6 held-out folds (180
 
 ---
 
+## Phase 5 — Correlation of Fused Alerts into incidents
+**Date:** Oct 21, 2026 · **Status:** DONE (`entity-time-graph-1.0.0`)
+
+### Method (`backend/app/services/attribution/correlation.py`)
+Nodes are Fused Alerts from the Phase 4 pipeline. Entities are first **canonicalised with the asset inventory**: a company address or a web vhost becomes the host that owns it, so activity seen in different layers meets on one node. Two alerts are linked when, within a 24-hour horizon:
+- **shared actor** — the same user / address / host acts in both; or
+- **pivot** — an entity the earlier alert *targeted* later *acts* (logged into the VPN server → traffic from the VPN server; scanned the intranet vhost → the intranet host runs `su` / `sudo`). A pivot links only to the **most recent** earlier alert that targeted the entity.
+
+Connected groups become Incident Objects (contract §6): title from the first and last technique, stages ordered by first seen, layers, entities, member alert IDs, link reasons (`shared_entity:…`, `pivot:…`, `stage_order`). **Disclosure:** the 24-hour horizon was chosen knowing (from its timeline, not from any detector output) that `wheeler` has a 10-hour gap between its two VPN sessions.
+
+### Evaluation (`scripts/evaluate_correlation.py`; pipeline = leave-one-scenario-out fusion + rules first, so every scenario's alerts are out-of-sample)
+| Scenario | Role | Fused Alerts | Incidents | Intrusion in ONE incident | Its share of intrusion alerts | Stages in it | Benign alerts merged into it | Benign-only incidents | Consolidation |
+| :--- | :--- | ---: | ---: | :--- | ---: | :--- | ---: | ---: | ---: |
+| russellmitchell | dev | 18 | 4 | yes | 6 / 6 | 4 / 4 | **7** | 2 | 4.5 |
+| fox | dev | 7 | 2 | yes | 5 / 5 | 4 / 4 | 1 | 1 | 3.5 |
+| harrison | held-out | 12 | 4 | yes | 5 / 5 | 3 / 4 (discovery never detected) | 1 | 2 | 3.0 |
+| santos | held-out | 5 | 1 | yes | 5 / 5 | 4 / 4 | 0 | 0 | 5.0 |
+| shaw | held-out | 5 | 1 | yes | 5 / 5 | 4 / 4 | 0 | 0 | 5.0 |
+| wardbeck | held-out | 6 | 2 | yes | 5 / 5 | 4 / 4 | 0 | 1 | 3.0 |
+| wheeler | held-out | 6 | 1 | yes (both VPN sessions, 10 h apart) | 6 / 6 | 4 / 4 | 0 | 0 | 6.0 |
+| wilson | held-out | 17 | 7 | yes | 6 / 6 | 4 / 4 | 0 | 6 | 2.4 |
+
+**Pooled held-out:** the intrusion is one incident in **6 / 6** scenarios, holding **100 %** of its alerts, all 4 stages in 5 / 6, spanning all four layers (identity, network, application, endpoint) every time; **exfiltration was never merged** into the intrusion (correct — separate activity, its own incident); 1 benign alert merged in total; **1.1 benign-only incidents per day**; consolidation 3.2 Fused Alerts per incident (raw windows → incidents: 22 flagged windows/day → ~2 incidents/day).
+
+### Problem found (development scenario) — recorded, not tuned
+In `russellmitchell` 7 benign alerts joined the intrusion incident. All were *review*-level (confidence ≈ 0.02, no rule hit) single VPN logins by ordinary users. The **VPN server is a hub**: every VPN login targets it and every VPN user's traffic comes from it, so over 24 hours anything touching it can chain. The held-out results had already been seen when this was diagnosed, so the method stays 1.0.0 as measured. Proposed for 1.1 (to be validated on new data): links through hub entities (many alerts within the horizon) only within a short horizon (≈ 1 hour), and review-level alerts never act as a bridge between two alert-level groups.
+
+### Tests
+`test_correlation.py` (7): a three-layer attack becomes one incident through two pivots; without the inventory the layers do not meet; unrelated alerts stay separate; the horizon is respected; a pivot links only the most recent cause (a benign client earlier on the same server stays out); shared-actor links and the consolidation ratio; determinism and order independence; canonicalisation of addresses and vhosts. `test_phase5_results.py` (2): every alert in exactly one incident, pooled = sum of scenarios. **Mutation check 5 / 5** (pivot to every earlier target, inventory ignored, horizon ignored, pivots dropped, targets treated as actors). Whole suite: **321 passed**.
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
@@ -737,6 +769,6 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 1. ~~Held-out evaluation~~ done (Phase 3e).
 2. ~~Phase 4 final~~ done.
-3. **Phase 5 correlation** using the asset inventories (address → host, FQDN → host) to link the VPN login, the web / DNS activity and the privilege steps into one incident; **Phase 6 attribution** (entry point, path, reach).
+3. ~~Phase 5 correlation~~ done. **Phase 6 attribution** next: per-incident graph, entry point, time-respecting path, reached assets, blast radius, dwell time, explanation — checked against each scenario's ground truth (the VPN login is the entry; the intranet server is reached).
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).
