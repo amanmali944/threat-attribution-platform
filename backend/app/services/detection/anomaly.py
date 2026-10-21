@@ -25,7 +25,7 @@ from app.services.detection import contract as C
 from app.services.detection.envelope import build_alert
 from app.services.detection.features import FEATURE_KINDS, FEATURE_NAMES
 
-MODEL_VERSION = "iforest-1.0.0"
+MODEL_VERSION = "iforest-1.1.0"  # 1.1.0: inputs are the fs-1.2.0 features
 RULE_ID = "ML-IFOREST-001"
 
 _LOG_FEATURES = frozenset(

@@ -12,8 +12,11 @@ Writes, inside <out dir>:
     baseline.json                                  the fitted baseline (entity IDs are hashes)
     dataset_report.json                            counts, cross-checks, assumptions
 
-`--clean-baseline` removes exfiltration-class events from the baseline fit (uses labels; the
-report records it). Window labels: incident > exfiltration > background.
+`--clean-baseline` removes exfiltration-class events from the baseline fit and from the rolling
+history (uses labels; the report records it). Window labels: incident > exfiltration > background.
+
+Entity history rolls forward: each day is scored against the baseline fit plus every earlier
+day (features.update_history), as a deployed system would see it.
 
 Cross-checks (the build stops if one fails):
   * every label maps to a class or is explicitly ignored;
@@ -34,7 +37,13 @@ from typing import Any, Dict, List, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
-from app.services.detection.features import FeatureConfig, compute_features, fit_baseline  # noqa: E402
+from app.services.detection.features import (  # noqa: E402
+    Baseline,
+    FeatureConfig,
+    compute_features,
+    fit_baseline,
+    update_history,
+)
 from app.services.detection.labeling import (  # noqa: E402
     classify_by_event_labels,
     label_windows,
@@ -124,6 +133,13 @@ def main() -> int:
         dropped_from_baseline = len(baseline_events) - len(kept)
         baseline_events = kept
     baseline = fit_baseline(baseline_events, config)
+    fitted = Baseline.from_dict(baseline.to_dict())       # saved as fitted; the live copy rolls forward
+
+    def history_events(day_events):
+        # the clean variant keeps exfiltration out of the rolling history as well as the fit
+        if not args.clean_baseline:
+            return day_events
+        return [e for e in day_events if classes.get(e.event_id) != "exfiltration"]
 
     # ---- windows, one UTC day at a time (300 s windows divide a day exactly)
     by_day: Dict[str, List[Any]] = defaultdict(list)
@@ -140,6 +156,7 @@ def main() -> int:
     try:
         for day in sorted(by_day):
             vectors = compute_features(by_day[day], baseline, config)
+            update_history(baseline, history_events(by_day[day]))   # tomorrow's history includes today
             labels = label_windows(vectors, classes, precedence)
             per_day = Counter()
             for vector, label in zip(vectors, labels):
@@ -164,7 +181,7 @@ def main() -> int:
             raise SystemExit(f"{len(expected - covered[cls])} incident events not in an incident window")
 
     with open(os.path.join(args.out_dir, "baseline.json"), "w", encoding="utf-8", newline="\n") as handle:
-        json.dump(baseline.to_dict(), handle, sort_keys=True)
+        json.dump(fitted.to_dict(), handle, sort_keys=True)
 
     by_split: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
     by_split_type: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -184,8 +201,10 @@ def main() -> int:
         "events_by_class": dict(Counter(classes.values())),
         "events_by_class_and_split": {k: dict(v) for k, v in sorted(class_by_split.items())},
         "class_time_span": {k: [_iso(a), _iso(b)] for k, (a, b) in sorted(class_span.items())},
-        "baseline": {"events": baseline.n_events, "entities": len(baseline.entities),
-                     "exfiltration_events_removed": dropped_from_baseline, "cohort_stats": baseline.cohort_stats},
+        "baseline": {"events": fitted.n_events, "entities": len(fitted.entities),
+                     "exfiltration_events_removed": dropped_from_baseline, "cohort_stats": fitted.cohort_stats,
+                     "history_at_end": {"events": baseline.n_events, "entities": len(baseline.entities)},
+                     "history": "rolls forward one UTC day at a time (fs-1.2.0)"},
         "window_label_coverage": coverage,
         "windows_by_split": {k: dict(v) for k, v in sorted(by_split.items())},
         "windows_by_split_label_entity_type": {k: dict(v) for k, v in sorted(by_split_type.items())},

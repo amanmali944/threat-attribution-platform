@@ -1,4 +1,4 @@
-import math
+﻿import math
 import random
 
 import numpy as np
@@ -99,5 +99,5 @@ def test_reference_set_defines_the_scale():
 
 def test_metadata_records_versions_and_params(detector):
     meta = detector.metadata()
-    assert meta["model_version"] == "iforest-1.0.0" and meta["feature_set_version"] == "fs-1.1.0"
+    assert meta["model_version"] == "iforest-1.1.0" and meta["feature_set_version"] == "fs-1.2.0"
     assert meta["params"]["random_state"] == 42

@@ -1,4 +1,4 @@
-import json
+﻿import json
 import math
 import random
 import time
@@ -15,6 +15,7 @@ from app.services.detection.features import (
     compute_features,
     extract,
     fit_baseline,
+    update_history,
 )
 from app.services.detection.resolve import entity_id, resolve_events
 
@@ -40,13 +41,13 @@ def fit(raw, config=FeatureConfig(), cohort_of=None):
 
 
 def test_catalogue_matches_contract_table():
-    """The 24 features in docs/DETECTION_CONTRACT.md section 3.1 (fs-1.1.0)."""
+    """The 28 features in docs/DETECTION_CONTRACT.md section 3.1 (fs-1.2.0)."""
     contract_text = (Path(__file__).resolve().parents[3] / "docs" / "DETECTION_CONTRACT.md").read_text(encoding="utf-8")
-    assert len(FEATURE_NAMES) == 24
+    assert len(FEATURE_NAMES) == 28
     for name in FEATURE_NAMES:
         assert f"`{name}`" in contract_text, f"{name} missing from contract"
-    assert C.FEATURE_SET_VERSION == "fs-1.1.0"
-    assert "Feature catalogue (fs-1.1.0)" in contract_text
+    assert C.FEATURE_SET_VERSION == "fs-1.2.0"
+    assert "Feature catalogue (fs-1.2.0)" in contract_text
 
 
 def test_baseline_from_another_feature_set_is_refused():
@@ -308,13 +309,94 @@ def test_new_target_counts_distinct_first_time_targets():
 
 
 def test_cold_start_entities_are_not_flagged_as_novel():
-    baseline = fit(_history("u6", "203.0.113.50") + _history("u8", "203.0.113.60", n=5))
+    baseline = fit(_history("u6", "203.0.113.50") + _history("u9", "203.0.113.70", n=2))
     raw = [login("n1", -7 * 3600, "u7", "198.51.100.77", "SUCCESS", country="RU"),    # never seen
-           login("n2", -7 * 3600, "u8", "198.51.100.77", "SUCCESS", country="RU")]    # only 5 events < 20
+           login("n3", -7 * 3600, "u9", "198.51.100.77", "SUCCESS", country="RU")]    # 2 logins < 3
     vecs = vectors_of(raw, baseline)
-    for user in ("u7", "u8"):
+    for user in ("u7", "u9"):
         f = vector_for(vecs, uid(user))["features"]
         assert (f["novelty.new_source_ip"], f["novelty.new_country"], f["timing.off_hours"]) == (0, 0, 0), user
+
+
+def test_source_novelty_needs_only_a_few_logins_but_other_novelty_stays_cold():
+    # u8: 5 successful logins (>= min_login_history 3) but < 20 events in total.
+    baseline = fit(_history("u8", "203.0.113.60", n=5))
+    new_ip = vector_for(vectors_of([login("n2", -7 * 3600, "u8", "198.51.100.77", "SUCCESS", country="RU")],
+                                   baseline), uid("u8"))["features"]
+    assert new_ip["novelty.new_source_ip"] == 1                                    # a stranger's IP for this account
+    assert (new_ip["novelty.new_country"], new_ip["timing.off_hours"]) == (0, 0)   # still cold for the rest
+    same_ip = vector_for(vectors_of([login("n4", -7 * 3600, "u8", "203.0.113.60", "SUCCESS")], baseline),
+                         uid("u8"))["features"]
+    assert same_ip["novelty.new_source_ip"] == 0
+    stricter = FeatureConfig(min_login_history=6)
+    assert vector_for(vectors_of([login("n5", -7 * 3600, "u8", "198.51.100.77", "SUCCESS")], baseline, stricter),
+                      uid("u8"))["features"]["novelty.new_source_ip"] == 0
+
+
+def test_failed_logins_do_not_count_as_login_history():
+    history = [login(f"f{i}", -86400 + i, "u10", "203.0.113.80", "FAILURE") for i in range(5)]
+    baseline = fit(history)
+    assert baseline.entities[uid("u10")].login_success_count == 0
+    f = vector_for(vectors_of([login("x", 0, "u10", "198.51.100.77", "SUCCESS")], baseline), uid("u10"))["features"]
+    assert f["novelty.new_source_ip"] == 0
+
+
+def test_update_history_rolls_known_sources_forward():
+    baseline = fit(_history("u8", "203.0.113.60", n=5))
+    day_one = resolve_events([login("d1", -3600, "u8", "198.51.100.77", "SUCCESS")])[0]
+    assert vector_for(compute_features(day_one, baseline), uid("u8"))["features"]["novelty.new_source_ip"] == 1
+    before = (baseline.n_events, baseline.cohort_stats)
+    update_history(baseline, day_one)
+    assert baseline.n_events == before[0] + 1 and baseline.cohort_stats == before[1]   # cohort stats stay fixed
+    assert baseline.entities[uid("u8")].login_success_count == 6
+    day_two = resolve_events([login("d2", 0, "u8", "198.51.100.77", "SUCCESS")])[0]
+    assert vector_for(compute_features(day_two, baseline), uid("u8"))["features"]["novelty.new_source_ip"] == 0
+
+
+def test_login_history_survives_a_baseline_round_trip():
+    baseline = fit(_history("u8", "203.0.113.60", n=5))
+    restored = Baseline.from_dict(json.loads(json.dumps(baseline.to_dict())))
+    assert restored.entities[uid("u8")].login_success_count == 5
+
+
+# ------------------------------------------------------------------ fs-1.2.0 privilege and DNS features
+
+
+def dns(eid, offset, ip, name):
+    return {"event_id": eid, "tenant_id": TENANT, "source_layer": "network", "event_type": "dns_query",
+            "observed_at": iso(offset), "severity": "info",
+            "entities": [{"entity_type": "ip", "identifier": ip}, {"entity_type": "domain", "identifier": "example.org"}],
+            "payload": {"query_name": name}, "metadata": {}}
+
+
+def test_service_account_privileged_ops():
+    raw = [proc("s1", 10, "www-data", "web-1", "su", "su alice"),
+           proc("s2", 20, "WWW-DATA", "web-1", "/usr/bin/sudo", "sudo id"),        # case-insensitive, path stripped
+           proc("s3", 30, "www-data", "web-1", "ls", "ls /tmp"),                   # not privileged
+           proc("s4", 40, "alice", "web-1", "sudo", "sudo ls")]                    # privileged, not a service account
+    host = vector_for(vectors_of(raw), entity_id("host", TENANT, "web-1"))["features"]
+    assert host["privilege.service_account_ops"] == 2 and host["privilege.privileged_ops"] == 3
+    assert vector_for(vectors_of(raw), uid("alice"))["features"]["privilege.service_account_ops"] == 0
+
+
+def test_credential_file_access():
+    raw = [proc("c1", 10, "alice", "web-1", "sudo", "/bin/cat /etc/shadow"),
+           proc("c2", 20, "alice", "web-1", "cat", "cat /home/bob/.ssh/id_rsa"),
+           proc("c3", 30, "alice", "web-1", "cat", "cat /etc/passwd")]               # public file: not counted
+    f = vector_for(vectors_of(raw), uid("alice"))["features"]
+    assert f["privilege.credential_file_access"] == 2
+
+
+def test_dns_distinct_and_long_names():
+    long_name = "a" * 60 + "." + "b" * 40 + ".example.org"                          # 113 characters
+    raw = [dns("q1", 1, "203.0.113.5", "www.example.org"),
+           dns("q2", 2, "203.0.113.5", "WWW.example.org."),                         # same name (case, trailing dot)
+           dns("q3", 3, "203.0.113.5", "mail.example.org"),
+           dns("q4", 4, "203.0.113.5", long_name),
+           dns("q5", 5, "203.0.113.5", long_name)]
+    f = vector_for(vectors_of(raw), ipid("203.0.113.5"))["features"]
+    assert f["dns.distinct_names"] == 3 and f["dns.long_names"] == 2
+    assert len(long_name) >= C.DNS_LONG_NAME_CHARS > len("mail.example.org")
 
 
 def test_no_baseline_means_no_baseline_features():
@@ -385,7 +467,7 @@ def test_golden_fixture_hand_checked_values():
     assert admin["features"]["volume.event_count"] == 1
     assert admin["features"]["failure.login_failure_rate"] == 0.0     # the logon succeeded
     assert admin["features"]["volume.login_count"] == 1 and admin["features"]["volume.login_success_count"] == 1
-    assert all(v["feature_set_version"] == "fs-1.1.0" for v in golden)
+    assert all(v["feature_set_version"] == "fs-1.2.0" for v in golden)
     tor_ip = next(v for v in golden if v["entity_id"] == entity_id("ip", tenant, "185.220.101.4"))
     assert tor_ip["features"]["diversity.distinct_accounts_from_ip"] == 1
     cloud = next(v for v in golden if v["entity_id"] == entity_id("cloud_identity", tenant, "arn:aws:iam::123456789012:user/deployer"))
@@ -408,3 +490,13 @@ def test_extraction_speed_on_20k_events():
     print(f"\n[perf] {len(raw)} events -> {len(out['vectors'])} vectors in {elapsed:.2f}s")
     assert out["report"]["events_resolved"] == len(raw)
     assert elapsed < 20
+
+
+def test_golden_fixture_fs120_values():
+    """Hand-checked: the platform sample has one DNS query (from one IP) and nothing else fs-1.2.0 counts."""
+    golden = json.loads((Path(__file__).resolve().parents[3] / "data" / "fixtures" / "expected_features.json")
+                        .read_text(encoding="utf-8"))
+    assert sum(v["features"]["dns.distinct_names"] for v in golden) == 1
+    assert [v["entity_type"] for v in golden if v["features"]["dns.distinct_names"]] == ["ip"]
+    for name in ("privilege.service_account_ops", "privilege.credential_file_access", "dns.long_names"):
+        assert all(v["features"][name] == 0 for v in golden), name

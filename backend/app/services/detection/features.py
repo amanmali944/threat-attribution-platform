@@ -1,9 +1,14 @@
-"""Deterministic feature engine (contract section 3, feature set fs-1.1.0).
+"""Deterministic feature engine (contract section 3, feature set fs-1.2.0).
 
 One feature definition serves training, evaluation and live inference:
 
     baseline = fit_baseline(normal_events, config)          # learn "normal"
     vectors  = compute_features(events, baseline, config)   # same code everywhere
+    update_history(baseline, events)                        # roll entity history forward
+
+Entity history (known IPs, targets, hours, login count) should cover everything seen before
+the period being scored: callers score one period (a UTC day) and then fold it into the
+history with ``update_history``. Cohort statistics stay those of the fitted normal period.
 
 Same input => byte-identical output: events are sorted, windows are aligned to
 the Unix epoch, all arithmetic uses exact integer microseconds where it can,
@@ -51,6 +56,10 @@ _FEATURE_SPEC: Tuple[Tuple[str, str], ...] = (
     ("privilege.tokens_issued", "int"),
     ("peer.volume_zscore", "float"),
     ("peer.targets_zscore", "float"),
+    ("privilege.service_account_ops", "int"),
+    ("privilege.credential_file_access", "int"),
+    ("dns.distinct_names", "int"),
+    ("dns.long_names", "int"),
 )
 FEATURE_NAMES: Tuple[str, ...] = tuple(name for name, _ in _FEATURE_SPEC)
 FEATURE_KINDS: Dict[str, str] = dict(_FEATURE_SPEC)
@@ -61,6 +70,7 @@ class FeatureConfig:
     window_seconds: int = 300
     stride_seconds: Optional[int] = None  # None => tumbling (stride == window)
     min_history_events: int = 20          # below this a baseline entity is "cold"
+    min_login_history: int = 3            # successful logins needed before source-IP novelty counts
     usual_hour_share: float = 0.02        # an hour is "usual" above this share of baseline events
     peer_std_floor: float = 1.0           # floor on cohort std (counts are integers)
 
@@ -84,6 +94,7 @@ class FeatureConfig:
 @dataclass
 class EntityBaseline:
     event_count: int = 0
+    login_success_count: int = 0
     known_ips: Set[str] = field(default_factory=set)
     known_devices: Set[str] = field(default_factory=set)
     known_countries: Set[str] = field(default_factory=set)
@@ -112,6 +123,7 @@ class Baseline:
             "entities": {
                 eid: {
                     "event_count": eb.event_count,
+                    "login_success_count": eb.login_success_count,
                     "known_ips": sorted(eb.known_ips),
                     "known_devices": sorted(eb.known_devices),
                     "known_countries": sorted(eb.known_countries),
@@ -134,6 +146,7 @@ class Baseline:
             entities={
                 eid: EntityBaseline(
                     event_count=int(e["event_count"]),
+                    login_success_count=int(e.get("login_success_count", 0)),
                     known_ips=set(e["known_ips"]),
                     known_devices=set(e["known_devices"]),
                     known_countries=set(e["known_countries"]),
@@ -191,22 +204,16 @@ def _hour(ts_us: int) -> int:
     return (ts_us // 3_600_000_000) % 24
 
 
-def fit_baseline(
-    events: Iterable[EnrichedEvent],
-    config: FeatureConfig = FeatureConfig(),
-    cohort_of: Optional[Mapping[str, str]] = None,
-) -> Baseline:
-    """Learn per-entity history and per-cohort volume statistics from normal events."""
-    ordered = sorted(events, key=_order)
-    cohort_of = dict(cohort_of or {})
-    entities: Dict[str, EntityBaseline] = {}
-
+def _accumulate(entities: Dict[str, EntityBaseline], ordered: Sequence[EnrichedEvent]) -> None:
+    """Fold events (already sorted) into per-entity history."""
     for event in ordered:
         hour = _hour(event.ts_us)
         country = event.payload.get("country")
+        login_ok = event.event_type == "user_login" and event.outcome == "success"
         for subject in event.subjects():
             eb = entities.setdefault(subject.entity_id, EntityBaseline())
             eb.event_count += 1
+            eb.login_success_count += login_ok
             if event.actor_ip and event.actor_ip.entity_id != subject.entity_id:
                 eb.known_ips.add(event.actor_ip.entity_id)
             if event.actor_device and event.actor_device.entity_id != subject.entity_id:
@@ -216,6 +223,30 @@ def fit_baseline(
             if event.target is not None:
                 eb.known_targets.add(event.target.entity_id)
             eb.hour_counts[hour] = eb.hour_counts.get(hour, 0) + 1
+
+
+def update_history(baseline: Baseline, events: Iterable[EnrichedEvent]) -> Baseline:
+    """Roll entity history forward with events that have now been scored (mutates and returns).
+
+    Only per-entity history changes; cohort statistics stay those of the fitted normal period,
+    so peer z-scores keep one fixed reference.
+    """
+    ordered = sorted(events, key=_order)
+    _accumulate(baseline.entities, ordered)
+    baseline.n_events += len(ordered)
+    return baseline
+
+
+def fit_baseline(
+    events: Iterable[EnrichedEvent],
+    config: FeatureConfig = FeatureConfig(),
+    cohort_of: Optional[Mapping[str, str]] = None,
+) -> Baseline:
+    """Learn per-entity history and per-cohort volume statistics from normal events."""
+    ordered = sorted(events, key=_order)
+    cohort_of = dict(cohort_of or {})
+    entities: Dict[str, EntityBaseline] = {}
+    _accumulate(entities, ordered)
 
     groups, refs = _group(ordered, config)
     volumes: Dict[str, List[float]] = defaultdict(list)
@@ -357,18 +388,15 @@ def _window_features(
     # ---- baseline-relative: off-hours + novelty
     entity_base = baseline.entities.get(subject.entity_id) if baseline else None
     warm = entity_base is not None and entity_base.event_count >= config.min_history_events
+    # Source-IP novelty needs to know where the account normally logs in from, which a few
+    # successful logins establish; the general 20-event warm-up would hide rarely used accounts.
+    knows_sources = warm or (entity_base is not None and entity_base.login_success_count >= config.min_login_history)
     f["timing.off_hours"] = 0
     f["novelty.new_source_ip"] = 0
     f["novelty.new_device"] = 0
     f["novelty.new_country"] = 0
     f["novelty.new_target"] = 0
-    if warm:
-        total_hours = sum(entity_base.hour_counts.values())
-        usual = {
-            h for h, c in entity_base.hour_counts.items() if c / total_hours >= config.usual_hour_share
-        }
-        off = sum(1 for e in events if _hour(e.ts_us) not in usual)
-        f["timing.off_hours"] = 1 if off / len(events) > 0.5 else 0
+    if knows_sources:
         f["novelty.new_source_ip"] = int(
             any(
                 e.actor_ip is not None
@@ -377,6 +405,13 @@ def _window_features(
                 for e in events
             )
         )
+    if warm:
+        total_hours = sum(entity_base.hour_counts.values())
+        usual = {
+            h for h, c in entity_base.hour_counts.items() if c / total_hours >= config.usual_hour_share
+        }
+        off = sum(1 for e in events if _hour(e.ts_us) not in usual)
+        f["timing.off_hours"] = 1 if off / len(events) > 0.5 else 0
         f["novelty.new_device"] = int(
             any(
                 e.actor_device is not None
@@ -405,6 +440,22 @@ def _window_features(
     f["privilege.privileged_ops"] = sum(1 for e in events if _is_privileged_op(e))
     f["privilege.role_changes"] = sum(1 for e in events if e.event_type == "privilege_change")
     f["privilege.tokens_issued"] = sum(1 for e in events if e.event_type == "token_issued")
+    f["privilege.service_account_ops"] = sum(
+        1 for e in events
+        if _is_privileged_op(e) and e.actor_user is not None
+        and e.actor_user.identifier.lower() in C.SERVICE_ACCOUNTS
+    )
+    f["privilege.credential_file_access"] = sum(
+        1 for e in events
+        if e.event_type == "process_execution"
+        and any(p in str(e.payload.get("command_line", "")).lower() for p in C.CREDENTIAL_PATHS)
+    )
+
+    # ---- dns
+    names = [str(e.payload["query_name"]).rstrip(".").lower() for e in events
+             if e.event_type == "dns_query" and e.payload.get("query_name") not in (None, "")]
+    f["dns.distinct_names"] = len(set(names))
+    f["dns.long_names"] = sum(1 for n in names if len(n) >= C.DNS_LONG_NAME_CHARS)
 
     # ---- peer-relative
     f["peer.volume_zscore"] = 0.0

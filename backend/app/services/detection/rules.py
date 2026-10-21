@@ -1,4 +1,4 @@
-"""Rules engine (Phase 3a): Feature Vectors -> Alert Envelopes. Rule sets rules-1.0.0 / rules-1.1.0.
+"""Rules engine (Phase 3a): Feature Vectors -> Alert Envelopes. Rule sets rules-1.0.0 / 1.1.0 / 1.2.0.
 
 Every rule is a generic, documented behaviour (not tuned to one dataset). Conditions read
 fs-1.1.0 features only. Two kinds of threshold:
@@ -17,6 +17,9 @@ The rule definitions are shared; the rule-set version selects the calibration po
                 still applies as an inclusive minimum. Plus a validation gate: ``gate()`` turns
                 off any rule that fires on more than ``gate_max_fire_rate`` of validation
                 background windows, before any test scoring.
+* rules-1.2.0 - the 1.1.0 calibration plus three rules on fs-1.2.0 features (service-account
+                privilege use, credential-file access, long DNS names), and a gate that keeps a
+                rule whose validation fires sit on <= 2 entities (reported as persistent findings).
 
 Rule hits are binary, so a rule alert's ``score`` is 1.0; ``confidence`` is left to fusion.
 """
@@ -32,7 +35,7 @@ from app.services.detection import contract as C
 from app.services.detection.envelope import build_alert
 from app.services.detection.features import FEATURE_NAMES
 
-RULESET_VERSION = "rules-1.1.0"  # the current default
+RULESET_VERSION = "rules-1.2.0"  # the current default
 CALIBRATED = "$calibrated"
 
 
@@ -42,12 +45,16 @@ class CalibrationPolicy:
     strict: bool                            # calibrated bound must be exceeded, not met
     margin: float                           # relative headroom above the learned value
     gate_max_fire_rate: Optional[float]     # validation gate budget (None: no gate)
+    # An over-budget rule whose validation fires all come from at most this many entities is
+    # not noisy - it describes those entities (e.g. a compromise already running before
+    # monitoring began). It stays on and the entities are reported for review. 0 = off.
+    gate_persistent_max_entities: int = 0
 
 
-RULESETS: Dict[str, CalibrationPolicy] = {
-    "rules-1.0.0": CalibrationPolicy(quantile=None, strict=False, margin=0.0, gate_max_fire_rate=None),
-    "rules-1.1.0": CalibrationPolicy(quantile=1.0, strict=True, margin=0.25, gate_max_fire_rate=0.005),
-}
+POLICY_V1 = CalibrationPolicy(quantile=None, strict=False, margin=0.0, gate_max_fire_rate=None)
+POLICY_V11 = CalibrationPolicy(quantile=1.0, strict=True, margin=0.25, gate_max_fire_rate=0.005)
+POLICY_V12 = CalibrationPolicy(quantile=1.0, strict=True, margin=0.25, gate_max_fire_rate=0.005,
+                               gate_persistent_max_entities=2)
 
 _OPS: Dict[str, Callable[[float, float], bool]] = {
     ">=": operator.ge, ">": operator.gt, "==": operator.eq, "<=": operator.le, "<": operator.lt,
@@ -88,7 +95,7 @@ class Rule:
         return found[0] if found else None
 
 
-DEFAULT_RULES: Tuple[Rule, ...] = (
+RULES_V1: Tuple[Rule, ...] = (
     Rule("RULE-IDN-001", "Brute-force login burst", "credential_access", "T1110", "low", ("user", "ip"),
          (Condition("volume.login_count", ">=", 10),
           Condition("failure.login_failure_rate", ">=", 0.9),
@@ -128,6 +135,35 @@ DEFAULT_RULES: Tuple[Rule, ...] = (
          quantile=0.999, floor=10000),
 )
 
+# rules-1.2.0 additions (fs-1.2.0 features). Chosen after the AIT development scenarios
+# (russellmitchell, fox) showed the privilege, discovery and exfiltration stages produce no
+# signal in rules-1.1.0; each is a standard, documented behaviour, not a dataset artefact.
+RULES_V12_ADDED: Tuple[Rule, ...] = (
+    Rule("RULE-PRIV-004", "Service account switching user or running privileged commands", "privilege_escalation",
+         "T1548", "high", ("user", "host"),
+         (Condition("privilege.service_account_ops", ">=", 1),),
+         "A service account (web server, database, daemon) ran su / sudo: typical after a web shell, never routine."),
+    Rule("RULE-PRIV-005", "Credential file accessed", "credential_access", "T1003.008", "high", ("user", "host"),
+         (Condition("privilege.credential_file_access", ">=", 1),),
+         "A command named a credential store such as /etc/shadow or an SSH private key."),
+    # A "DNS enumeration burst" rule on dns.distinct_names (calibrated) was tried and dropped on
+    # the development scenarios: the brute force gave 137 / 155 distinct names in its window,
+    # ordinary busy windows of the same shared address 153-233 - 0 of 2 caught, 2 false alarms.
+    # The signal is the one-second burst, which a 5-minute count blurs; the feature stays a
+    # fusion input. (Rule IDs are not reused: NET-001 stays retired.)
+    Rule("RULE-NET-002", "Long DNS query names (possible tunnelling)", "exfiltration", "T1071.004", "high", ("ip",),
+         (Condition("dns.long_names", ">=", 10),),
+         "Ten or more DNS names of 100+ characters in one window: data packed into DNS labels."),
+)
+RULES_V12: Tuple[Rule, ...] = RULES_V1 + RULES_V12_ADDED
+
+RULESETS: Dict[str, Tuple[CalibrationPolicy, Tuple[Rule, ...]]] = {
+    "rules-1.0.0": (POLICY_V1, RULES_V1),
+    "rules-1.1.0": (POLICY_V11, RULES_V1),
+    "rules-1.2.0": (POLICY_V12, RULES_V12),
+}
+DEFAULT_RULES: Tuple[Rule, ...] = RULESETS[RULESET_VERSION][1]
+
 
 def nearest_rank_quantile(values: Sequence[float], q: float) -> float:
     """Smallest value v with at least q of the data <= v (nearest-rank; deterministic)."""
@@ -140,7 +176,7 @@ def nearest_rank_quantile(values: Sequence[float], q: float) -> float:
 
 @dataclass
 class RuleEngine:
-    rules: Tuple[Rule, ...] = DEFAULT_RULES
+    rules: Optional[Tuple[Rule, ...]] = None  # None: the rule set's own rules
     thresholds: Dict[str, Dict[str, float]] = field(default_factory=dict)  # rule_id -> entity_type -> value
     calibration: Dict[str, Any] = field(default_factory=dict)
     ruleset: str = RULESET_VERSION
@@ -151,10 +187,12 @@ class RuleEngine:
     def __post_init__(self) -> None:
         if self.ruleset not in RULESETS:
             raise ValueError(f"unknown rule set: {self.ruleset}")
+        if self.rules is None:
+            self.rules = RULESETS[self.ruleset][1]
 
     @property
     def policy(self) -> CalibrationPolicy:
-        return RULESETS[self.ruleset]
+        return RULESETS[self.ruleset][0]
 
     def calibrate(self, background_vectors: Iterable[Mapping[str, Any]]) -> "RuleEngine":
         """Learn calibrated thresholds from background windows (never from incident windows)."""
@@ -198,21 +236,31 @@ class RuleEngine:
             raise ValueError(f"{self.ruleset} has no validation gate; pass max_fire_rate")
         windows = Counter()
         fires = Counter()
+        fired_on: Dict[str, Counter] = {}
         for vector in background_vectors:
             for rule in self.rules:
                 if vector["entity_type"] in rule.entity_types:
                     windows[rule.rule_id] += 1
             for alert in self.evaluate(vector, include_disabled=True):
                 fires[alert["rule_id"]] += 1
-        self.disabled, report = {}, {}
+                fired_on.setdefault(alert["rule_id"], Counter())[alert["entity_id"]] += 1
+        persistent_max = self.policy.gate_persistent_max_entities
+        self.disabled, report, persistent = {}, {}, {}
         for rule in self.rules:
             n, k = windows[rule.rule_id], fires[rule.rule_id]
             rate = k / n if n else 0.0
-            passed = rate <= budget
-            report[rule.rule_id] = {"windows": n, "fires": k, "fire_rate": round(rate, 6), "passed": passed}
-            if not passed:
-                self.disabled[rule.rule_id] = f"fired on {k}/{n} validation background windows ({rate:.2%} > {budget:.2%})"
-        self.gate_report = {"max_fire_rate": budget, "rules": report}
+            entities = fired_on.get(rule.rule_id, Counter())
+            row = {"windows": n, "fires": k, "fire_rate": round(rate, 6), "passed": rate <= budget,
+                   "entities": len(entities)}
+            if not row["passed"] and persistent_max and len(entities) <= persistent_max:
+                row["persistent"] = True                    # concentrated, not noisy: keep it on
+                persistent[rule.rule_id] = dict(sorted(entities.items()))
+            elif not row["passed"]:
+                self.disabled[rule.rule_id] = (f"fired on {k}/{n} validation background windows "
+                                               f"({rate:.2%} > {budget:.2%}) across {len(entities)} entities")
+            report[rule.rule_id] = row
+        self.gate_report = {"max_fire_rate": budget, "persistent_max_entities": persistent_max, "rules": report,
+                            "persistent_findings": persistent}
         return self
 
     def _threshold(self, rule: Rule, condition: Condition, entity_type: str) -> Tuple[float, str]:

@@ -1,7 +1,7 @@
 [
   {
     "schema_version": "1.0",
-    "feature_set_version": "fs-1.1.0",
+    "feature_set_version": "fs-1.2.0",
     "tenant_id": "tenant-default-001",
     "entity_id": "ent-host-5b7d17eb",
     "entity_type": "host",
@@ -35,12 +35,16 @@
       "privilege.role_changes": 0,
       "privilege.tokens_issued": 0,
       "peer.volume_zscore": 0.0,
-      "peer.targets_zscore": 0.0
+      "peer.targets_zscore": 0.0,
+      "privilege.service_account_ops": 0,
+      "privilege.credential_file_access": 0,
+      "dns.distinct_names": 0,
+      "dns.long_names": 0
     }
   },
   {
     "schema_version": "1.0",
-    "feature_set_version": "fs-1.1.0",
+    "feature_set_version": "fs-1.2.0",
     "tenant_id": "tenant-default-001",
     "entity_id": "ent-ip-06df46dd",
     "entity_type": "ip",
@@ -74,12 +78,16 @@
       "privilege.role_changes": 0,
       "privilege.tokens_issued": 0,
       "peer.volume_zscore": 0.0,
-      "peer.targets_zscore": 0.0
+      "peer.targets_zscore": 0.0,
+      "privilege.service_account_ops": 0,
+      "privilege.credential_file_access": 0,
+      "dns.distinct_names": 0,
+      "dns.long_names": 0
     }
   },
   {
     "schema_version": "1.0",
-    "feature_set_version": "fs-1.1.0",
+    "feature_set_version": "fs-1.2.0",
     "tenant_id": "tenant-default-001",
     "entity_id": "ent-ip-16720950",
     "entity_type": "ip",
@@ -113,12 +121,16 @@
       "privilege.role_changes": 0,
       "privilege.tokens_issued": 0,
       "peer.volume_zscore": 0.0,
-      "peer.targets_zscore": 0.0
+      "peer.targets_zscore": 0.0,
+      "privilege.service_account_ops": 0,
+      "privilege.credential_file_access": 0,
+      "dns.distinct_names": 1,
+      "dns.long_names": 0
     }
   },
   {
     "schema_version": "1.0",
-    "feature_set_version": "fs-1.1.0",
+    "feature_set_version": "fs-1.2.0",
     "tenant_id": "tenant-default-001",
     "entity_id": "ent-user-70075ef5",
     "entity_type": "user",
@@ -152,12 +164,16 @@
       "privilege.role_changes": 0,
       "privilege.tokens_issued": 0,
       "peer.volume_zscore": 0.0,
-      "peer.targets_zscore": 0.0
+      "peer.targets_zscore": 0.0,
+      "privilege.service_account_ops": 0,
+      "privilege.credential_file_access": 0,
+      "dns.distinct_names": 0,
+      "dns.long_names": 0
     }
   },
   {
     "schema_version": "1.0",
-    "feature_set_version": "fs-1.1.0",
+    "feature_set_version": "fs-1.2.0",
     "tenant_id": "tenant-default-001",
     "entity_id": "ent-user-eb2dad2d",
     "entity_type": "user",
@@ -191,12 +207,16 @@
       "privilege.role_changes": 0,
       "privilege.tokens_issued": 0,
       "peer.volume_zscore": 0.0,
-      "peer.targets_zscore": 0.0
+      "peer.targets_zscore": 0.0,
+      "privilege.service_account_ops": 0,
+      "privilege.credential_file_access": 0,
+      "dns.distinct_names": 0,
+      "dns.long_names": 0
     }
   },
   {
     "schema_version": "1.0",
-    "feature_set_version": "fs-1.1.0",
+    "feature_set_version": "fs-1.2.0",
     "tenant_id": "tenant-default-001",
     "entity_id": "ent-cloud_identity-dbcab388",
     "entity_type": "cloud_identity",
@@ -230,7 +250,11 @@
       "privilege.role_changes": 0,
       "privilege.tokens_issued": 0,
       "peer.volume_zscore": 0.0,
-      "peer.targets_zscore": 0.0
+      "peer.targets_zscore": 0.0,
+      "privilege.service_account_ops": 0,
+      "privilege.credential_file_access": 0,
+      "dns.distinct_names": 0,
+      "dns.long_names": 0
     }
   }
 ]

@@ -8,7 +8,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Tuple
 
 SCHEMA_VERSION = "1.0"
-FEATURE_SET_VERSION = "fs-1.1.0"  # fs-1.1.0 added volume.login_count, volume.login_success_count
+# fs-1.1.0 added volume.login_count, volume.login_success_count.
+# fs-1.2.0 added privilege.service_account_ops, privilege.credential_file_access, dns.distinct_names,
+# dns.long_names; source-IP novelty gated on login history; history rolls forward day by day.
+FEATURE_SET_VERSION = "fs-1.2.0"
 
 LAYERS: Tuple[str, ...] = (
     "identity",
@@ -63,6 +66,24 @@ FAILURE_VALUES = frozenset({"failure", "failed", "fail", "error", "denied"})
 # privilege.privileged_ops). Kept here so rules and features agree.
 ADMIN_PROCESSES = frozenset({"sudo", "su", "runas.exe", "psexec.exe", "psexec64.exe"})
 PRIVILEGED_DB_OPERATIONS = frozenset({"GRANT", "DDL"})
+
+# Accounts that run services and should never switch user or run privileged commands
+# interactively (feature privilege.service_account_ops). Lower-case, exact match.
+SERVICE_ACCOUNTS = frozenset({
+    "www-data", "apache", "httpd", "nginx", "nobody", "daemon", "tomcat", "iis_iusrs",
+    "postgres", "mysql", "redis", "bind", "named", "proxy",
+})
+
+# Credential stores; a process whose command line names one counts as credential-file access
+# (feature privilege.credential_file_access). Matched as substrings of the command line.
+CREDENTIAL_PATHS: Tuple[str, ...] = (
+    "/etc/shadow", "/etc/gshadow", "/etc/master.passwd", "/etc/security/opasswd",
+    "/.ssh/id_rsa", "/.ssh/id_ed25519", "/.ssh/id_ecdsa", "\\config\\sam", "\\ntds.dit",
+)
+
+# A DNS query name at least this long counts as long (feature dns.long_names). Ordinary
+# names stay well below it; tunnelling packs data into labels up to the 253-character limit.
+DNS_LONG_NAME_CHARS = 100
 
 
 def _blank(value: Any) -> bool:

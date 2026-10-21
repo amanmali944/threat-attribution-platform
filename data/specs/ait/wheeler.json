@@ -1,0 +1,65 @@
+{
+  "dataset": "ait-lds-v2/wheeler",
+  "window_seconds": 300,
+  "incident": {
+    "start": "2022-01-30T07:35:00Z",
+    "end": "2022-01-30T17:55:00Z"
+  },
+  "label_classes": {
+    "incident": [
+      "foothold",
+      "escalate",
+      "attacker_vpn",
+      "dns_scan",
+      "traceroute",
+      "network_scan",
+      "service_scan",
+      "dirb",
+      "wpscan",
+      "attacker_http",
+      "webshell_upload",
+      "webshell_cmd",
+      "attacker_change_user",
+      "escalated_command",
+      "escalated_sudo_command",
+      "escalated_sudo_session"
+    ],
+    "exfiltration": [
+      "dnsteal",
+      "dnsteal-received",
+      "dnsteal-dropped"
+    ]
+  },
+  "ignored_labels": [
+    "attacker"
+  ],
+  "splits": {
+    "baseline": [
+      "2022-01-26T00:00:00Z",
+      "2022-01-27T00:00:00Z"
+    ],
+    "train": [
+      "2022-01-27T00:00:00Z",
+      "2022-01-29T00:00:00Z"
+    ],
+    "validation": [
+      "2022-01-29T00:00:00Z",
+      "2022-01-29T23:00:00Z"
+    ],
+    "gap": [
+      "2022-01-29T23:00:00Z",
+      "2022-01-30T00:00:00Z"
+    ],
+    "test": [
+      "2022-01-30T00:00:00Z",
+      "2022-01-31T00:00:00Z"
+    ]
+  },
+  "provenance": {
+    "source": "AIT Log Data Set V2.0 (Zenodo 10.5281/zenodo.5789064, CC BY-NC-SA 4.0), scenario wheeler; per-line labels from the dataset's labels/ directory.",
+    "generated_by": "scripts/make_ait_spec.py (same rule for every scenario)",
+    "incident_window": "attacks.log vpn_connect 2022-01-30T07:35:00.013751+00:00 -> vpn_disconnect 2022-01-30T17:52:19.363853+00:00, widened to window boundaries (2 VPN sessions: 07:35:00-07:57:06; 17:51:00-17:52:19).",
+    "exfiltration": "attacks.log dnsteal_stop 2022-01-30T14:47:06.898466+00:00",
+    "splits": "baseline = first day; train = following days up to the day before the incident; validation = that day until 23:00; gap = its last hour; test = incident day to the end of the data."
+  }
+}

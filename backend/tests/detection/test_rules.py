@@ -69,6 +69,16 @@ CASES = [
     ("RULE-DB-001", "user",
      dict(volume__rows_read=20000.0),                         # background tiny, so the floor (10000) applies
      dict(volume__rows_read=9000.0)),
+    # rules-1.2.0 additions
+    ("RULE-PRIV-004", "host",
+     dict(privilege__service_account_ops=1),
+     dict(privilege__privileged_ops=3)),                      # privileged, but not by a service account
+    ("RULE-PRIV-005", "user",
+     dict(privilege__credential_file_access=1),
+     dict(privilege__privileged_ops=1)),
+    ("RULE-NET-002", "ip",
+     dict(dns__long_names=10),
+     dict(dns__long_names=9, dns__distinct_names=9)),
 ]
 
 
@@ -112,8 +122,20 @@ def test_v100_threshold_is_max_of_floor_and_background_quantile():
     assert engine.calibration["background_windows_by_type"] == {"host": 20, "user": 50}
 
 
+def test_rule_lists_per_version():
+    assert len(RuleEngine(ruleset="rules-1.0.0").rules) == len(RuleEngine(ruleset="rules-1.1.0").rules) == 9
+    v12 = RuleEngine(ruleset="rules-1.2.0")
+    assert len(v12.rules) == 12 and v12.rules[:9] == RuleEngine(ruleset="rules-1.1.0").rules
+    assert "RULE-NET-001" not in {r.rule_id for r in v12.rules}                # tried and dropped on dev data
+    v11 = RuleEngine(ruleset="rules-1.1.0").policy                              # same calibration, wiser gate
+    assert (v12.policy.quantile, v12.policy.strict, v12.policy.margin, v12.policy.gate_max_fire_rate) == \
+           (v11.quantile, v11.strict, v11.margin, v11.gate_max_fire_rate)
+    assert v12.policy.gate_persistent_max_entities == 2 and v11.gate_persistent_max_entities == 0
+    assert RuleEngine().ruleset == "rules-1.2.0"
+
+
 def test_v110_bound_is_background_max_plus_margin_and_strict(engine):
-    assert engine.ruleset == "rules-1.1.0"
+    assert engine.ruleset == "rules-1.2.0"                                      # 1.1.0 policy
     assert engine.thresholds["RULE-PRIV-001"]["host"] == pytest.approx(23.75)   # max 19 x 1.25
     assert engine.threshold_ops["RULE-PRIV-001"]["host"] == ">"
     assert engine.thresholds["RULE-PRIV-001"]["user"] == 5                      # 2 x 1.25 < floor 5
@@ -143,22 +165,46 @@ def test_unknown_ruleset_is_rejected():
 # ------------------------------------------------------------------ validation gate
 
 
+BURST = dict(volume__login_count=12, failure__login_failure_rate=1.0, failure__max_consecutive_failures=12)
+
+
 def noisy_validation():
-    """200 user windows; 2 of them (1%) look like a brute-force burst, nothing else fires."""
-    quiet = [vec("user", entity_id=f"ent-user-{i:08d}") for i in range(198)]
-    burst = dict(volume__login_count=12, failure__login_failure_rate=1.0, failure__max_consecutive_failures=12)
-    return quiet + [vec("user", entity_id=f"ent-user-b{i:07d}", **burst) for i in range(2)]
+    """300 user windows; 3 of them (1%), on 3 different users, look like a brute-force burst."""
+    quiet = [vec("user", entity_id=f"ent-user-{i:08d}") for i in range(297)]
+    return quiet + [vec("user", entity_id=f"ent-user-b{i:07d}", **BURST) for i in range(3)]
+
+
+def persistent_validation():
+    """300 user windows; 6 of them (2%) fire, all on ONE user - concentrated, not noisy."""
+    quiet = [vec("user", entity_id=f"ent-user-{i:08d}") for i in range(294)]
+    return quiet + [vec("user", entity_id="ent-user-pppppppp", window_start=f"2026-10-05T1{i}:00:00Z", **BURST)
+                    for i in range(6)]
 
 
 def test_gate_disables_a_rule_above_the_budget_and_keeps_the_rest(engine):
     engine.gate(noisy_validation())
     assert set(engine.disabled) == {"RULE-IDN-001"}
-    assert "2/200" in engine.disabled["RULE-IDN-001"]
+    assert "3/300" in engine.disabled["RULE-IDN-001"] and "3 entities" in engine.disabled["RULE-IDN-001"]
     row = engine.gate_report["rules"]["RULE-IDN-001"]
-    assert row == {"windows": 200, "fires": 2, "fire_rate": 0.01, "passed": False}
+    assert row == {"windows": 300, "fires": 3, "fire_rate": 0.01, "passed": False, "entities": 3}
+    assert engine.gate_report["persistent_findings"] == {}
     assert engine.gate_report["max_fire_rate"] == 0.005
     assert engine.gate_report["rules"]["RULE-PRIV-001"]["passed"] is True
     assert engine.gate_report["rules"]["RULE-APP-001"]["windows"] == 0          # ip-only rule, no ip windows
+
+
+def test_v120_gate_keeps_a_rule_concentrated_on_few_entities_and_reports_them(engine):
+    engine.gate(persistent_validation())
+    assert "RULE-IDN-001" not in engine.disabled
+    row = engine.gate_report["rules"]["RULE-IDN-001"]
+    assert row["passed"] is False and row["persistent"] is True and row["entities"] == 1
+    assert engine.gate_report["persistent_findings"] == {"RULE-IDN-001": {"ent-user-pppppppp": 6}}
+    assert "RULE-IDN-001" in fired(engine, vec("user", **BURST))                 # still on
+
+
+def test_v110_gate_disables_even_a_concentrated_rule():
+    engine = RuleEngine(ruleset="rules-1.1.0").calibrate(background()).gate(persistent_validation())
+    assert "RULE-IDN-001" in engine.disabled and engine.gate_report["persistent_findings"] == {}
 
 
 def test_disabled_rules_stay_silent_unless_asked(engine):
@@ -203,7 +249,7 @@ def test_rule_alerts_are_valid_envelopes_with_evidence(engine):
     assert {a["rule_id"] for a in alerts} == {"RULE-PRIV-001", "RULE-PRIV-003"}
     for alert in alerts:
         assert validate_alert(alert) == []
-        assert alert["detector"] == "rules" and alert["detector_version"] == "rules-1.1.0"
+        assert alert["detector"] == "rules" and alert["detector_version"] == "rules-1.2.0"
         assert alert["score"] == 1.0 and alert["confidence"] is None
         assert alert["event_ids"] == ["e1", "e2"] and alert["observed_at"] == "2026-10-05T10:05:00Z"
     burst = next(a for a in alerts if a["rule_id"] == "RULE-PRIV-001")

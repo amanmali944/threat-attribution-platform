@@ -10,8 +10,8 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (176)
-python -m pytest tests -q                    # whole backend suite (235)
+python -m pytest tests/detection -q          # Developer A tests (239 + 3 version-gated skips)
+python -m pytest tests -q                    # whole backend suite (298)
 
 # Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
 python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
@@ -23,6 +23,12 @@ python -I scripts/build_ait_windows.py data/external/ait/derived/russellmitchell
 python -I scripts/build_ait_windows.py data/external/ait/derived/russellmitchell data/specs/ait_russellmitchell.json data/external/ait/windows/russellmitchell-clean --clean-baseline
 python -I scripts/evaluate_ait.py data/external/ait/windows/russellmitchell-asis data/specs/ait_russellmitchell.json data/external/ait/derived/russellmitchell data/evaluation/phase3_ait_russellmitchell_asis.json
 python -I scripts/evaluate_ait.py data/external/ait/windows/russellmitchell-clean data/specs/ait_russellmitchell.json data/external/ait/derived/russellmitchell data/evaluation/phase3_ait_russellmitchell_clean.json
+
+# Multi-scenario AIT corpus (Phase 1e): fetch the standard slice of each scenario, then build everything
+python -I scripts/fetch_remote_zip.py "https://zenodo.org/records/5789064/files/<scenario>.zip?download=1" ait-slice data/external/ait/scenarios/<scenario>
+python -I scripts/build_ait_corpus.py data/external/ait/scenarios data/external/ait/corpus
+python -I scripts/evaluate_ait.py data/external/ait/corpus/windows/<scenario>-asis data/specs/ait/<scenario>.json data/external/ait/corpus/derived/<scenario> data/external/ait/corpus/eval/<scenario>-asis.json --dump-windows data/external/ait/corpus/dumps/<scenario>-asis.jsonl
+python -I scripts/evaluate_fusion.py data/external/ait/corpus/dumps <results json> --scenarios <scenario> <scenario> ... --variant asis
 ```
 
 ---
@@ -286,7 +292,7 @@ The exfiltration host has a window in every 5-minute slot (288 per day) — it n
 | 04:35 | user jhall | 2 | sudo as jhall | 2 privileged operations |
 | 04:35 | web-server account | 1 | su to jhall | 1 privileged operation |
 
-**Correction to 1d, point 4 (found while inspecting the windows):** `172.19.131.174` is **not an attacker-only address**. It produces ~2,600–2,900 DNS queries and 300–500 web requests on *every* day, and jhall's legitimate SSH logins on Jan 21 and 23 come from it — it is the firewall's NAT address for the internal user network. Consequences: (a) attack windows on that IP are mixed with normal traffic, so only loud steps (the 7,719-event scan) stand out; (b) for attribution, "the attacker's IP" is a shared address — the causal chain has to be carried by the VPN session, user and host, not by the IP.
+**Correction to 1d, point 4 (found while inspecting the windows):** `172.19.131.174` is **not an attacker-only address**. It produces ~2,600–2,900 DNS queries and 300–500 web requests on *every* day, and jhall's legitimate SSH logins on Jan 21 and 23 come from it. ~~it is the firewall's NAT address for the internal user network~~ **Corrected later (Phase 1e, from the scenario's `servers.yaml`): it is the VPN server's own address — every VPN client, the attacker included, is masqueraded behind it.** Consequences: (a) attack windows on that IP are mixed with normal traffic, so only loud steps (the 7,719-event scan) stand out; (b) for attribution, "the attacker's IP" is a shared address — the causal chain has to be carried by the VPN session, user and host, not by the IP.
 
 **Tests (`test_labeling.py`, +13 → 29 passed):** event-label spec loads without the routine-hours field; a heuristic spec without it is rejected; five bad-class specs rejected (wrong order, shared labels, reserved names, empty class, ignored-and-mapped); precedence (incident beats exfiltration), ignored-only events unlabelled, **unmapped labels surfaced**; custom window-label precedence; the committed AIT spec is valid; and a real-data check over both variants (incident windows only in test and inside the interval, every window in its split, labels never in features, counts equal the report, full label coverage). **Mutation check: 4 / 4 caught** (precedence ignored, unmapped labels dropped, class overlap accepted, window precedence reversed). Detection suite: **151 passed**.
 
@@ -545,6 +551,116 @@ On the first dataset the detectors were not built around, the system catches **t
 
 ---
 
+## Phase 1e — Multi-scenario AIT corpus (all 8 scenarios) and the development / held-out split
+**Date:** Oct 21, 2026 · **Status:** DONE
+
+### Why
+One intrusion cannot calibrate or train anything, and `russellmitchell`'s results have been seen. AIT-LDS v2.0 has **8 scenarios** (different companies, dates, users, address plans, attack timings) with the same labelled attack template. They give 8 independent incidents and a clean protocol:
+- **Development scenarios: `russellmitchell`, `fox`.** Detector output may be looked at; every design change is decided here.
+- **Held-out scenarios: `harrison`, `santos`, `shaw`, `wardbeck`, `wheeler`, `wilson`.** Converted and integrity-checked only. **No detector is run on them until the design is frozen and committed**; then the frozen system is scored once.
+
+### What was built
+| File | What it does |
+| :--- | :--- |
+| `scripts/fetch_remote_zip.py` (new, replaces a scratch tool) | Reads a remote zip by HTTP range requests, CRC-checked, path-safe. `ait-slice` fetches the standard slice: metadata, attacker timeline, and the web (Apache access), auth, DNS and VPN logs of the **company's** hosts with their label files. 25–52 MB per scenario out of 7–27 GB zips |
+| `scripts/make_ait_spec.py` (new) | Writes each scenario's spec from its own `dataset.yaml` + `attacks.log` with **one rule for all**: incident = first VPN connect → last VPN disconnect (window-aligned); baseline = day 1, train = following days, validation = the day before the incident (to 23:00), gap = its last hour, test = incident day → end. Reproduces the hand-written `russellmitchell` spec exactly |
+| `scripts/adapters/ait_assets.py` (new) | Asset inventory of the company's hosts from `servers.yaml` (hostname, addresses, FQDNs, groups → criticality 4 for servers, 2 otherwise). Needed by correlation / attribution to link layers |
+| `scripts/convert_ait_scenario.py` | Converts **company hosts only**; web logs per host (`web-<host>`, IDs cannot collide) |
+| `scripts/build_ait_corpus.py` (new) | Per scenario: convert → assets → spec → windows (as-is and clean) → `corpus_report.json` (integrity checks only, no detector) |
+| `data/specs/ait/<scenario>.json` | The 8 generated specs (committed). The hand-written Phase 1b spec `data/specs/ait_russellmitchell.json` is kept as it was |
+
+### Problems found and fixed
+| Problem | How found | Fix |
+| :--- | :--- | :--- |
+| **"Company host" by address was wrong.** The first rule treated 192.168.0.0/16 as AIT's simulated internet. True in 3 scenarios by coincidence; in `harrison`, `santos`, `shaw` and `wheeler` the internet sits elsewhere, so the attacker, external users and internet DNS were kept **and the intranet server, firewall DNS and internal share were dropped** | the fetch log listed `attacker_0` as a company host | Rule by **role name** instead (AIT names roles consistently: `attacker_N`, `ext_user_N`, `remote_employee_N`, `inet-dns`, `<name>_mail`; the company mail server is plain `mail`). Stray internet-host files removed (listed one by one), the 4 slices re-fetched with `--resume`. 20 tests pin the rule |
+| `wheeler`'s attacker used **two VPN sessions** (07:35–07:57 recon + web shell, offline password cracking, 17:51–17:52 privilege step) | the spec generator refused it (it expected one session) | Rule generalised to alternating sessions, first connect → last disconnect (10 h 20 min incident; windows between the sessions stay background unless labelled). Unbalanced or out-of-order sessions are still refused |
+| The corpus builder overwrote the hand-written `ait_russellmitchell.json` | the provenance test noticed | Generated specs live in `data/specs/ait/`; the hand-written file restored from git |
+| `servers.yaml` list parsing returned nothing (`^  {2}-` matched 3 spaces, not 4) | empty groups in the first inventory | Regex fixed; parser tests added |
+
+**Facts learned from `servers.yaml`:** `172.19.131.174` in `russellmitchell` is the **VPN server** (correcting Phase 1b, which called it the firewall NAT); the exfiltration source `10.143.0.103` is the internal **file share**; the web shell's DNS lookups come from the **intranet server** (`10.143.2.4`); every host is configured `timezone: UTC` (confirms the timestamp assumption).
+
+### The corpus (every scenario: line accounting balanced, 0 contract problems, every incident and exfiltration event inside a window with its label)
+| Scenario | Role | Company hosts | Events | Incident events | Incident (UTC) | Test windows: incident / exfiltration / background |
+| :--- | :--- | ---: | ---: | ---: | :--- | :--- |
+| russellmitchell | development | 12 | 157,189 | 7,984 | Jan 24 03:00–04:40 | 10 / 167 / 1,153 |
+| fox | development | 13 | 586,398 | 411,036 | Jan 18 11:55–13:15 | 14 / 0 / 2,100 |
+| harrison | held-out | 11 | 639,548 | 415,565 | Feb 08 07:05–08:40 | 17 / 112 / 1,023 |
+| santos | held-out | 17 | 237,879 | 8,043 | Jan 17 11:15–12:00 | 9 / 0 / 1,631 |
+| shaw | held-out | 13 | 244,029 | 5,391 | Jan 29 14:35–15:25 | 8 / 0 / 2,842 |
+| wardbeck | held-out | 14 | 275,564 | 5,542 | Jan 23 12:10–13:00 | 8 / 0 / 1,552 |
+| wheeler | held-out | 16 | 727,973 | 431,748 | Jan 30 07:35–17:55 (2 sessions) | 13 / 0 / 1,388 |
+| wilson | held-out | 15 | 851,789 | 428,383 | Feb 07 10:55–11:50 | 13 / 0 / 3,831 |
+| **total** | | | **3,720,369** | **1,713,692** | 8 intrusions | **92 / 279 / 15,520** |
+
+Integrity (`data/evaluation/ait_corpus_report.json`): all 8 scenarios × 2 variants — line accounting balanced, 0 contract problems, 100 % label-to-window coverage. Exfiltration falls in the test day in only 2 scenarios (`russellmitchell`, `harrison`); elsewhere it stops earlier.
+
+The huge incident counts (fox, harrison, wheeler: > 400,000) are `dirb` runs of ~400,000 requests; elsewhere the scan was short. Every incident has exactly 1 host window and 3–4 user windows (VPN login, su, sudo) — the same attack template, which is why held-out results generalise to *this attack family*, not to attacks in general.
+
+---
+
+## Phase 3d — fs-1.2.0 and rules-1.2.0, designed on the development scenarios
+**Date:** Oct 21, 2026 · **Status:** DONE (frozen before any held-out scenario was scored)
+
+### What the development scenarios showed (rules-1.1.0 + fs-1.1.0)
+Both caught only the web scan. Per-window inspection gave four causes, each generic:
+1. **History frozen at day 1.** The baseline was fitted on the first day and never updated, so a user first seen on day 2 was "unknown" for ever.
+2. **The 20-event warm-up hid stolen credentials.** In `fox` every VPN user always connects from one fixed address; the attacker logs in as `bpotter` from a new one, but `bpotter` has only 4 logins, so source-IP novelty was never computed.
+3. **No feature for a web shell's privilege steps.** It is `www-data` running `su`, then `sudo cat /etc/shadow`.
+4. **No DNS features** (tunnelling packs data into 100–250-character names).
+
+### Changes
+| Change | Detail |
+| :--- | :--- |
+| Rolling history (`features.update_history`) | Each day is scored against everything seen before it; cohort statistics stay those of the fitted period. Both window builders use it |
+| Login-history gate | `novelty.new_source_ip` needs `min_login_history` = 3 prior successful logins (failed logins do not count), not the 20-event warm-up. Other novelty / off-hours features stay cold |
+| fs-1.2.0 (+4 features, 28 total) | `privilege.service_account_ops`, `privilege.credential_file_access`, `dns.distinct_names`, `dns.long_names` (≥ 100 characters). Contract §3.1 / §3.2 updated |
+| rules-1.2.0 (+3 rules, 12 total) | RULE-PRIV-004 service account switching user / using sudo (high, T1548); RULE-PRIV-005 credential file accessed (high, T1003.008); RULE-NET-002 ≥ 10 long DNS names in a window (high, T1071.004) |
+| Gate: persistent findings | A rule over the 0.5 % budget whose validation fires all sit on ≤ 2 entities stays **on**, and those entities are reported as persistent findings. In `russellmitchell` as-is, the tunnelling rule fired on 25 % of validation windows — all from the one exfiltrating file share. 1.1.0's gate turned it off (the compromise looked like noise); 1.2.0's keeps it on |
+| Tried and dropped | RULE-NET-001 "DNS enumeration burst" (calibrated distinct names): the brute force gave 137 / 155 distinct names in its window, ordinary busy windows of the same shared address 153–233 → 0 of 2 caught, 2 false alarms. The signal is a one-second burst that a 5-minute count blurs. ID retired |
+| iforest-1.1.0 | Same model, fs-1.2.0 inputs |
+| Versioning | Old results stay as historical records; their reproduction tests now skip with the reason (produced by fs-1.1.0) instead of being overwritten |
+
+### Development results (in-sample: these scenarios shaped the change)
+| Scenario | Rule set | Incident windows | Stages (entry / discovery / web / privilege) | False alarms / day | First alert | Exfiltration windows |
+| :--- | :--- | ---: | :--- | ---: | ---: | ---: |
+| russellmitchell | rules-1.1.0 (fs-1.1.0, Phase 3) | 1 / 10 | – / – / ✓ / – | 0 | 60 min | 0 / 167 |
+| russellmitchell | **rules-1.2.0** | **5 / 10** | ✓ / ✓* / ✓ / ✓ | **0** | **5 min** | **167 / 167** (as-is and clean) |
+| fox | rules-1.1.0 (fs-1.1.0) | 5 / 14 | – / ✓* / ✓ / – | 0.5 | 25 min | – |
+| fox | **rules-1.2.0** | **9 / 14** | ✓ / ✓* / ✓ / ✓ | 0.5 | **5 min** | – |
+
+\* Discovery is credited only because the web-scan windows also contain the service scan; no rule detects the DNS brute force or the host discovery themselves.
+
+The Isolation Forest at ≥ 0.999 still flags no incident window (saturation, Phase 3); within IP windows it ranks well and is used as a fusion input.
+
+### Tests and checks
+New: rolling history, the login-history gate (both sides of the limit, failed logins excluded, round trip), the four features (case and path handling, name normalisation, the 100-character limit), rules-1.2.0 cases, rule lists per version, the persistent-finding gate (kept on 1 entity, disabled across 3, 1.1.0 still disables). Golden fixture regenerated and hand-checked: only the 4 new features differ (all 0 except one DNS name on one IP window). **Mutation check: 8 / 8 caught** (login gate removed, failed logins counted, history not rolled, case-sensitive service accounts, DNS names not normalised, long-name limit moved, persistent rule disabled anyway, entity concentration ignored).
+
+---
+
+## Phase 4 — Fusion, calibration, alert-fatigue controls (design; final evaluation pending)
+**Date:** Oct 21, 2026 · **Status:** design frozen on the development scenarios; leave-one-scenario-out over all 8 next
+
+### What was built
+| File | What it does |
+| :--- | :--- |
+| `backend/app/services/detection/fusion.py` (new) | 16 fusion inputs (rule hits by severity, IF score + "no model" flag, 8 key features, entity type) → logistic regression (C = 0.1; HistGradientBoosting challenger) → isotonic calibration on out-of-fold predictions (leave-one-scenario-out inside the training scenarios) → τ_alert (lowest confidence with out-of-fold precision ≥ 0.8) and τ_review (keeps 90 % of hostile windows) → alert / review / suppress → Fused Alerts (contract §5): repeats of one entity within 30 minutes folded, `suppressed_duplicates` counted. Explanations: coefficient × standardised input |
+| `scripts/evaluate_ait.py --dump-windows` | Writes every scored test window (label, stages, rule hits, IF score, features); each scenario's detectors are calibrated on its own earlier days, so these outputs are out-of-sample |
+| `scripts/evaluate_fusion.py` (new) | Leave-one-scenario-out: fusion trained on the other scenarios, the held-out scenario scored once. Reports ranking vs each single detector, calibration (ECE, Brier, reliability bins), decisions, recall per class and stage, alerts per day before / after folding |
+
+### Development check (train on one development scenario, test on the other)
+| Fusion version | Tested on | Hostile windows at "alert" | False alarms | Rules alone (any) |
+| :--- | :--- | ---: | ---: | :--- |
+| unweighted, C = 1 | russellmitchell | 171 / 177 | 0 | 172 / 177, 0 FA |
+| unweighted, C = 1 | fox | 9 / 14 | **120** | 9 / 14, 1 FA |
+| **weighted, C = 0.1 (frozen)** | russellmitchell | 172 / 177 | 0 | 172 / 177, 0 FA |
+| **weighted, C = 0.1 (frozen)** | fox | 4 / 14 | 5 | 9 / 14, 1 FA |
+
+What went wrong and what was changed: `russellmitchell`'s hostile windows are 94 % one exfiltration stream, so a model trained there learnt mostly that stream, and an alert threshold set inside one scenario (0.06) did not transfer. **Fix:** every (scenario, label) group gets equal training weight; stronger regularisation; calibration and thresholds stay unweighted so confidence matches real frequencies. With one training scenario fusion still does not beat the rules — reported as is; the real test is leave-one-out over 7 training scenarios.
+
+**Pre-registered pipeline decision (before any held-out score): rules first.** A high-severity rule hit → alert; any other rule hit → at least review; otherwise fusion decides. Fusion may add alerts and reviews, never silence a rule. Pure fusion and the pipeline decision are both reported.
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
@@ -553,7 +669,8 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. **More AIT scenarios (same slice)** — `russellmitchell` is now the development scenario; the others are the held-out test for every change from here, and fusion needs more than one incident.
-2. **fs-1.2.0 candidates**, decided on `russellmitchell`, judged on the other scenarios: DNS features (query length, label count, distinct subdomains per domain) and cold-start handling (cohort comparison for entities without history, first-ever privileged operation).
+1. **Held-out evaluation** of the frozen detectors (fs-1.2.0, rules-1.2.0, iforest-1.1.0) on the 6 held-out scenarios, once.
+2. **Phase 4 final:** fusion leave-one-scenario-out over all 8 (design frozen), calibration artefact, alerts per day before / after.
+3. **Phase 5 correlation** using the asset inventories (address → host, FQDN → host) to link the VPN login, the web / DNS activity and the privilege steps into one incident; **Phase 6 attribution** (entry point, path, reach).
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).

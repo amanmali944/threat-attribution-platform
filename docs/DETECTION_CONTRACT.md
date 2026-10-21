@@ -142,7 +142,7 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 ```json
 {
   "schema_version": "1.0",
-  "feature_set_version": "fs-1.1.0",
+  "feature_set_version": "fs-1.2.0",
   "tenant_id": "tenant-default-001",
   "entity_id": "ent-user-3f9a1c22",
   "entity_type": "user",
@@ -159,9 +159,10 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 }
 ```
 
-### 3.1 Feature catalogue (fs-1.1.0)
+### 3.1 Feature catalogue (fs-1.2.0)
 
 > **Change log.** fs-1.0.0 (Oct 21, 2026): 22 features. **fs-1.1.0 (Oct 21, 2026): added `volume.login_count` and `volume.login_success_count`** — without them a window with no logins and a window of only successful logins both showed `login_failure_rate = 0`, so "successful login from a never-seen source" could not be expressed. Added after the Org Y incident had been seen (see `logs.md`, Phase 3).
+> **fs-1.2.0 (Oct 21, 2026): 28 features.** Added `privilege.service_account_ops`, `privilege.credential_file_access`, `dns.distinct_names`, `dns.long_names`; `novelty.new_source_ip` now needs only `min_login_history` (default 3) prior successful logins instead of the 20-event warm-up; entity history rolls forward day by day (§3.2). Decided on the AIT development scenarios (`russellmitchell`, `fox`), where the entry, privilege, discovery and exfiltration stages produced no signal; judged on the held-out scenarios (see `logs.md`, Phase 3d).
 
 | Feature | Family | Definition |
 | :--- | :--- | :--- |
@@ -180,7 +181,7 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 | `timing.mean_interarrival_s` | Timing | Mean seconds between events |
 | `timing.interarrival_cv` | Timing | Coefficient of variation (low = automation / beaconing) |
 | `timing.off_hours` | Timing | 1 if window outside entity's usual hours, else 0 |
-| `novelty.new_source_ip` | Novelty | 1 if `actor_ip` never seen for entity before |
+| `novelty.new_source_ip` | Novelty | 1 if `actor_ip` never seen for entity before (needs ≥ `min_login_history` prior successful logins, or a warm entity) |
 | `novelty.new_device` | Novelty | 1 if `actor_device` never seen before |
 | `novelty.new_country` | Novelty | 1 if `payload.country` never seen before |
 | `novelty.new_target` | Novelty | Count of first-time targets |
@@ -189,6 +190,10 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 | `privilege.tokens_issued` | Privilege | `token_issued` events |
 | `peer.volume_zscore` | Peer-relative | z-score of `volume.event_count` vs entity's role cohort |
 | `peer.targets_zscore` | Peer-relative | z-score of `diversity.distinct_targets` vs cohort |
+| `privilege.service_account_ops` | Privilege | Privileged operations whose `actor_user` is a service account (`SERVICE_ACCOUNTS`: www-data, apache, nginx, nobody, …) (fs-1.2.0) |
+| `privilege.credential_file_access` | Privilege | `process_execution` events whose command line names a credential store (`CREDENTIAL_PATHS`: /etc/shadow, SSH private keys, SAM, …) (fs-1.2.0) |
+| `dns.distinct_names` | DNS | Distinct `payload.query_name` (lower-case, trailing dot removed) in `dns_query` events (fs-1.2.0) |
+| `dns.long_names` | DNS | `dns_query` events whose name has ≥ `DNS_LONG_NAME_CHARS` (100) characters (fs-1.2.0) |
 
 Adding or renaming a feature bumps `feature_set_version`. Window length is configurable (`window_seconds`, default 300).
 
@@ -196,7 +201,8 @@ Adding or renaming a feature bumps `feature_set_version`. Window length is confi
 
 - **Subject entities.** An event contributes to the vector of each *actor-side* entity it has: `actor_user`, `actor_ip`, `actor_host`. Targets do not get vectors in v1. So a brute-force burst shows up on both the targeted user and the source IP.
 - **Windows.** Aligned to the Unix epoch so replays are identical: a window starts at a multiple of `stride_seconds` (default = `window_seconds`, i.e. tumbling). A `stride_seconds` smaller than `window_seconds` gives overlapping (hopping) windows, so a burst split across a boundary is still caught whole. A vector is emitted only for windows that contain at least one event for the entity.
-- **Baseline.** Novelty, off-hours and peer features compare a window to a *baseline* fitted from a designated normal period (`fit_baseline`). The baseline is an input artefact (versioned, serialisable); the feature function is the same for training, evaluation and live use. Cold start: an entity with fewer than `min_history_events` (default 20) baseline events gets `0` for novelty and off-hours rather than flagging every new entity as anomalous.
+- **Baseline.** Novelty, off-hours and peer features compare a window to a *baseline* fitted from a designated normal period (`fit_baseline`). The baseline is an input artefact (versioned, serialisable); the feature function is the same for training, evaluation and live use. Cold start: an entity with fewer than `min_history_events` (default 20) baseline events gets `0` for novelty and off-hours rather than flagging every new entity as anomalous — except `novelty.new_source_ip`, which needs only `min_login_history` (default 3) prior successful logins (fs-1.2.0), because a rarely used account is exactly the one whose stolen credentials go unnoticed.
+- **Rolling history (fs-1.2.0).** Entity history (event and login counts, known IPs / devices / countries / targets, hours) covers everything seen *before* the period being scored: callers score one UTC day, then fold it in with `update_history`. Cohort statistics (peer z-scores) stay those of the fitted normal period.
 - **Peer cohort.** Default cohort = `entity_type`. An optional `cohort_of` mapping (entity ID → cohort name, e.g. a role from the asset inventory) refines it. z-scores use the cohort's baseline mean and standard deviation with a floor of `1.0` on the standard deviation (counts are integers).
 - **Degenerate values.** `timing.interarrival_cv` is `1.0` (neutral) with fewer than 3 events, and `0.0` if the mean gap is 0. Rates with a zero denominator are `0.0`.
 - **Skipped events.** An event missing a required payload key (§1.2) is not used for features and is counted in the extraction report (`skipped_events`, with the missing keys), never silently dropped or raised.

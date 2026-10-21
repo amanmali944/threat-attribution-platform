@@ -25,7 +25,13 @@ from typing import Any, Dict, Iterator, List, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
-from app.services.detection.features import FeatureConfig, compute_features, fit_baseline  # noqa: E402
+from app.services.detection.features import (  # noqa: E402
+    Baseline,
+    FeatureConfig,
+    compute_features,
+    fit_baseline,
+    update_history,
+)
 from app.services.detection.labeling import (  # noqa: E402
     Interval,
     classify_events,
@@ -104,6 +110,7 @@ def main() -> int:
                 continue
             if baseline is None:
                 baseline = fit_baseline(baseline_events, config)
+                fitted = Baseline.from_dict(baseline.to_dict())   # saved as fitted; the live copy rolls forward
                 baseline_events = []
 
             classes = classify_events(events, spec, routine)
@@ -115,6 +122,7 @@ def main() -> int:
                     post_in_incident += classes.get(event.event_id) == "incident"
 
             vectors = compute_features(events, baseline, config)
+            update_history(baseline, events)                      # tomorrow's history includes today
             labels = label_windows(vectors, classes)
             per_day = Counter()
             for vector, label in zip(vectors, labels):
@@ -131,7 +139,7 @@ def main() -> int:
             handle.close()
 
     with open(os.path.join(args.out_dir, "baseline.json"), "w", encoding="utf-8", newline="\n") as handle:
-        json.dump(baseline.to_dict(), handle, sort_keys=True)
+        json.dump(fitted.to_dict(), handle, sort_keys=True)
 
     by_split: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
     by_split_type: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -146,8 +154,10 @@ def main() -> int:
         "provenance": dict(spec.provenance),
         "routine_commands": {"count": len(routine), "min_hours": spec.routine_command_min_hours,
                              "examples": sorted(routine)[:10]},
-        "baseline": {"events": baseline.n_events, "entities": len(baseline.entities),
-                     "cohort_stats": baseline.cohort_stats},
+        "baseline": {"events": fitted.n_events, "entities": len(fitted.entities),
+                     "cohort_stats": fitted.cohort_stats,
+                     "history_at_end": {"events": baseline.n_events, "entities": len(baseline.entities)},
+                     "history": "rolls forward one UTC day at a time (fs-1.2.0)"},
         "notable_events": dict(event_classes),
         "post_compromise_labelled_events": {"seen_after_baseline": post_seen, "classified_incident": post_in_incident},
         "windows_by_split": {k: dict(v) for k, v in sorted(by_split.items())},

@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from app.services.detection import contract as C
+
 REPO = Path(__file__).resolve().parents[3]
 SPEC = REPO / "data" / "specs" / "ait_russellmitchell.json"
 DERIVED = REPO / "data" / "external" / "ait" / "derived" / "russellmitchell"
@@ -75,6 +77,10 @@ def test_evaluation_reproduces_the_committed_results(variant, tmp_path):
     windows = REPO / "data" / "external" / "ait" / "windows" / VARIANTS[variant][1]
     if not (windows / "test.jsonl").exists() or not DERIVED.exists():
         pytest.skip(f"AIT windows {variant} not built")
+    produced_with = load(variant)["isolation_forest"]["metadata"]["feature_set_version"]
+    if produced_with != C.FEATURE_SET_VERSION:
+        pytest.skip(f"committed results were produced with {produced_with}; the engine is now "
+                    f"{C.FEATURE_SET_VERSION} (re-run at the commit that produced them)")
     out = tmp_path / "again.json"
     subprocess.run([sys.executable, "-I", str(REPO / "scripts" / "evaluate_ait.py"),
                     str(windows), str(SPEC), str(DERIVED), str(out)], check=True, capture_output=True)

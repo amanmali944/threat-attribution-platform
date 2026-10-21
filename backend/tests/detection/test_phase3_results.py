@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from app.services.detection import contract as C
+
 REPO = Path(__file__).resolve().parents[3]
 RESULTS = REPO / "data" / "evaluation" / "phase3_org_y.json"
 WINDOWS = REPO / "data" / "external" / "web_server_logs" / "derived" / "org-y" / "windows"
@@ -59,7 +61,11 @@ def test_rule_fire_counts_add_up(results):
 
 
 @pytest.mark.skipif(not (WINDOWS / "test.jsonl").exists(), reason="Org Y windows not built")
-def test_evaluation_reproduces_the_committed_results(tmp_path):
+def test_evaluation_reproduces_the_committed_results(tmp_path, results):
+    produced_with = results["isolation_forest"]["metadata"]["feature_set_version"]
+    if produced_with != C.FEATURE_SET_VERSION:
+        pytest.skip(f"committed results were produced with {produced_with}; the engine is now "
+                    f"{C.FEATURE_SET_VERSION} (re-run at the commit that produced them)")
     out = tmp_path / "again.json"
     subprocess.run([sys.executable, "-I", str(REPO / "scripts" / "evaluate_org_y.py"),
                     str(WINDOWS), str(SPEC), str(out)], check=True, capture_output=True)

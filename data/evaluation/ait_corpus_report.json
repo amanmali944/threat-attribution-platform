@@ -1,0 +1,1197 @@
+{
+  "fox": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 36754,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 14672,
+        "incident": 411036
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 6168,
+          "train": 6151,
+          "validation": 2353
+        },
+        "incident": {
+          "test": 411036
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 10,
+        "user": 3
+      },
+      "seconds": 147.9,
+      "windows_by_split": {
+        "gap": {
+          "background": 5
+        },
+        "test": {
+          "background": 2100,
+          "incident": 14
+        },
+        "train": {
+          "background": 1042,
+          "exfiltration": 288
+        },
+        "validation": {
+          "background": 1191,
+          "exfiltration": 109
+        }
+      }
+    },
+    "build_seconds": 319.8,
+    "clean": {
+      "baseline_events": 30586,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 14672,
+        "incident": 411036
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 6168,
+          "train": 6151,
+          "validation": 2353
+        },
+        "incident": {
+          "test": 411036
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 10,
+        "user": 3
+      },
+      "seconds": 60.7,
+      "windows_by_split": {
+        "gap": {
+          "background": 5
+        },
+        "test": {
+          "background": 2100,
+          "incident": 14
+        },
+        "train": {
+          "background": 1042,
+          "exfiltration": 288
+        },
+        "validation": {
+          "background": 1191,
+          "exfiltration": 109
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_employee_3",
+      "internal_employee_4",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 586398,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 10,
+        "labelled": 4
+      },
+      "auth-mail": {
+        "events": 5,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 64124,
+        "labelled": 14862
+      },
+      "vpn-vpn": {
+        "events": 38,
+        "labelled": 1
+      },
+      "web-intranet_server": {
+        "events": 423006,
+        "labelled": 410841
+      },
+      "web-webserver": {
+        "events": 99215,
+        "labelled": 0
+      }
+    }
+  },
+  "harrison": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 48542,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 23592,
+        "incident": 415565
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 5411,
+          "gap": 227,
+          "test": 2068,
+          "train": 10726,
+          "validation": 5160
+        },
+        "incident": {
+          "test": 415565
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 13,
+        "user": 3
+      },
+      "seconds": 59.3,
+      "windows_by_split": {
+        "gap": {
+          "background": 4,
+          "exfiltration": 12
+        },
+        "test": {
+          "background": 1023,
+          "exfiltration": 112,
+          "incident": 17
+        },
+        "train": {
+          "background": 2003,
+          "exfiltration": 576
+        },
+        "validation": {
+          "background": 934,
+          "exfiltration": 276
+        }
+      }
+    },
+    "build_seconds": 229.6,
+    "clean": {
+      "baseline_events": 43131,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 23592,
+        "incident": 415565
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 5411,
+          "gap": 227,
+          "test": 2068,
+          "train": 10726,
+          "validation": 5160
+        },
+        "incident": {
+          "test": 415565
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 13,
+        "user": 3
+      },
+      "seconds": 57.6,
+      "windows_by_split": {
+        "gap": {
+          "background": 4,
+          "exfiltration": 12
+        },
+        "test": {
+          "background": 1023,
+          "exfiltration": 112,
+          "incident": 17
+        },
+        "train": {
+          "background": 2003,
+          "exfiltration": 576
+        },
+        "validation": {
+          "background": 934,
+          "exfiltration": 276
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 639548,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 5,
+        "labelled": 5
+      },
+      "auth-mail": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 90365,
+        "labelled": 23775
+      },
+      "vpn-vpn": {
+        "events": 172,
+        "labelled": 1
+      },
+      "web-intranet_server": {
+        "events": 440394,
+        "labelled": 415376
+      },
+      "web-webserver": {
+        "events": 108612,
+        "labelled": 0
+      }
+    }
+  },
+  "russellmitchell": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 36956,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 17693,
+        "incident": 7984
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 4962,
+          "gap": 205,
+          "test": 2854,
+          "train": 4948,
+          "validation": 4724
+        },
+        "incident": {
+          "test": 7984
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 6,
+        "user": 3
+      },
+      "seconds": 15.1,
+      "windows_by_split": {
+        "gap": {
+          "background": 13,
+          "exfiltration": 12
+        },
+        "test": {
+          "background": 1153,
+          "exfiltration": 167,
+          "incident": 10
+        },
+        "train": {
+          "background": 1317,
+          "exfiltration": 288
+        },
+        "validation": {
+          "background": 1288,
+          "exfiltration": 276
+        }
+      }
+    },
+    "build_seconds": 46.4,
+    "clean": {
+      "baseline_events": 31994,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 17693,
+        "incident": 7984
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 4962,
+          "gap": 205,
+          "test": 2854,
+          "train": 4948,
+          "validation": 4724
+        },
+        "incident": {
+          "test": 7984
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 6,
+        "user": 3
+      },
+      "seconds": 13.8,
+      "windows_by_split": {
+        "gap": {
+          "background": 13,
+          "exfiltration": 12
+        },
+        "test": {
+          "background": 1153,
+          "exfiltration": 167,
+          "incident": 10
+        },
+        "train": {
+          "background": 1317,
+          "exfiltration": 288
+        },
+        "validation": {
+          "background": 1288,
+          "exfiltration": 276
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_employee_3",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 157189,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 6,
+        "labelled": 3
+      },
+      "auth-mail": {
+        "events": 3,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 81277,
+        "labelled": 17978
+      },
+      "vpn-vpn": {
+        "events": 66,
+        "labelled": 1
+      },
+      "web-intranet_server": {
+        "events": 11184,
+        "labelled": 7695
+      },
+      "web-webserver": {
+        "events": 64653,
+        "labelled": 0
+      }
+    }
+  },
+  "santos": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 59400,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 12854,
+        "incident": 8043
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 5579,
+          "train": 5574,
+          "validation": 1701
+        },
+        "incident": {
+          "test": 8043
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 5,
+        "user": 3
+      },
+      "seconds": 19.8,
+      "windows_by_split": {
+        "gap": {
+          "background": 5
+        },
+        "test": {
+          "background": 1631,
+          "incident": 9
+        },
+        "train": {
+          "background": 1614,
+          "exfiltration": 288
+        },
+        "validation": {
+          "background": 1707,
+          "exfiltration": 88
+        }
+      }
+    },
+    "build_seconds": 68.5,
+    "clean": {
+      "baseline_events": 53821,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 12854,
+        "incident": 8043
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 5579,
+          "train": 5574,
+          "validation": 1701
+        },
+        "incident": {
+          "test": 8043
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 5,
+        "user": 3
+      },
+      "seconds": 18.9,
+      "windows_by_split": {
+        "gap": {
+          "background": 5
+        },
+        "test": {
+          "background": 1631,
+          "incident": 9
+        },
+        "train": {
+          "background": 1614,
+          "exfiltration": 288
+        },
+        "validation": {
+          "background": 1707,
+          "exfiltration": 88
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_employee_3",
+      "internal_employee_4",
+      "internal_employee_5",
+      "internal_employee_6",
+      "internal_employee_7",
+      "internal_employee_8",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 237879,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 4,
+        "labelled": 4
+      },
+      "auth-mail": {
+        "events": 3,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 71918,
+        "labelled": 13098
+      },
+      "vpn-vpn": {
+        "events": 77,
+        "labelled": 1
+      },
+      "web-intranet_server": {
+        "events": 15784,
+        "labelled": 7794
+      },
+      "web-webserver": {
+        "events": 150093,
+        "labelled": 0
+      }
+    }
+  },
+  "shaw": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 39386,
+      "coverage_complete": true,
+      "events_by_class": {
+        "incident": 5391
+      },
+      "events_by_class_and_split": {
+        "incident": {
+          "test": 5391
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 4,
+        "user": 3
+      },
+      "seconds": 20.3,
+      "windows_by_split": {
+        "gap": {
+          "background": 11
+        },
+        "test": {
+          "background": 2842,
+          "incident": 8
+        },
+        "train": {
+          "background": 2672
+        },
+        "validation": {
+          "background": 1215
+        }
+      }
+    },
+    "build_seconds": 69.2,
+    "clean": {
+      "baseline_events": 39386,
+      "coverage_complete": true,
+      "events_by_class": {
+        "incident": 5391
+      },
+      "events_by_class_and_split": {
+        "incident": {
+          "test": 5391
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 4,
+        "user": 3
+      },
+      "seconds": 19.1,
+      "windows_by_split": {
+        "gap": {
+          "background": 11
+        },
+        "test": {
+          "background": 2842,
+          "incident": 8
+        },
+        "train": {
+          "background": 2672
+        },
+        "validation": {
+          "background": 1215
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_employee_3",
+      "internal_employee_4",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 244029,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 6,
+        "labelled": 4
+      },
+      "auth-mail": {
+        "events": 1,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 82045,
+        "labelled": 160
+      },
+      "vpn-vpn": {
+        "events": 105,
+        "labelled": 1
+      },
+      "web-intranet_server": {
+        "events": 15746,
+        "labelled": 5226
+      },
+      "web-webserver": {
+        "events": 146126,
+        "labelled": 0
+      }
+    }
+  },
+  "wardbeck": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 60978,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 15085,
+        "incident": 5542
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 7822,
+          "train": 7263
+        },
+        "incident": {
+          "test": 5542
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 4,
+        "user": 3
+      },
+      "seconds": 23.1,
+      "windows_by_split": {
+        "gap": {
+          "background": 25
+        },
+        "test": {
+          "background": 1552,
+          "incident": 8
+        },
+        "train": {
+          "background": 3367,
+          "exfiltration": 267
+        },
+        "validation": {
+          "background": 1582
+        }
+      }
+    },
+    "build_seconds": 79.5,
+    "clean": {
+      "baseline_events": 53156,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 15085,
+        "incident": 5542
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 7822,
+          "train": 7263
+        },
+        "incident": {
+          "test": 5542
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 4,
+        "user": 3
+      },
+      "seconds": 22.4,
+      "windows_by_split": {
+        "gap": {
+          "background": 25
+        },
+        "test": {
+          "background": 1552,
+          "incident": 8
+        },
+        "train": {
+          "background": 3367,
+          "exfiltration": 267
+        },
+        "validation": {
+          "background": 1582
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_employee_3",
+      "internal_employee_4",
+      "internal_employee_5",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 275564,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 12,
+        "labelled": 4
+      },
+      "auth-mail": {
+        "events": 5,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 76869,
+        "labelled": 15323
+      },
+      "vpn-vpn": {
+        "events": 94,
+        "labelled": 1
+      },
+      "web-intranet_server": {
+        "events": 42101,
+        "labelled": 5299
+      },
+      "web-webserver": {
+        "events": 156483,
+        "labelled": 0
+      }
+    }
+  },
+  "wheeler": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 60791,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 19185,
+        "incident": 431748
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 5941,
+          "train": 11887,
+          "validation": 1357
+        },
+        "incident": {
+          "test": 431748
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 8,
+        "user": 4
+      },
+      "seconds": 68.9,
+      "windows_by_split": {
+        "gap": {
+          "background": 5
+        },
+        "test": {
+          "background": 1388,
+          "incident": 13
+        },
+        "train": {
+          "background": 2707,
+          "exfiltration": 576
+        },
+        "validation": {
+          "background": 1512,
+          "exfiltration": 66
+        }
+      }
+    },
+    "build_seconds": 230.5,
+    "clean": {
+      "baseline_events": 54850,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 19185,
+        "incident": 431748
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 5941,
+          "train": 11887,
+          "validation": 1357
+        },
+        "incident": {
+          "test": 431748
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 8,
+        "user": 4
+      },
+      "seconds": 64.7,
+      "windows_by_split": {
+        "gap": {
+          "background": 5
+        },
+        "test": {
+          "background": 1388,
+          "incident": 13
+        },
+        "train": {
+          "background": 2707,
+          "exfiltration": 576
+        },
+        "validation": {
+          "background": 1512,
+          "exfiltration": 66
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_employee_3",
+      "internal_employee_4",
+      "internal_employee_5",
+      "internal_employee_6",
+      "internal_employee_7",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 727973,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 5,
+        "labelled": 4
+      },
+      "auth-mail": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 104175,
+        "labelled": 19367
+      },
+      "vpn-vpn": {
+        "events": 225,
+        "labelled": 2
+      },
+      "web-intranet_server": {
+        "events": 440920,
+        "labelled": 431560
+      },
+      "web-webserver": {
+        "events": 182648,
+        "labelled": 0
+      }
+    }
+  },
+  "wilson": {
+    "accounting_ok": true,
+    "asis": {
+      "baseline_events": 77228,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 21230,
+        "incident": 428383
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 6155,
+          "train": 12307,
+          "validation": 2768
+        },
+        "incident": {
+          "test": 428383
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 9,
+        "user": 3
+      },
+      "seconds": 76.9,
+      "windows_by_split": {
+        "gap": {
+          "background": 16
+        },
+        "test": {
+          "background": 3831,
+          "incident": 13
+        },
+        "train": {
+          "background": 3634,
+          "exfiltration": 576
+        },
+        "validation": {
+          "background": 1931,
+          "exfiltration": 130
+        }
+      }
+    },
+    "build_seconds": 261.7,
+    "clean": {
+      "baseline_events": 71073,
+      "coverage_complete": true,
+      "events_by_class": {
+        "exfiltration": 21230,
+        "incident": 428383
+      },
+      "events_by_class_and_split": {
+        "exfiltration": {
+          "baseline": 6155,
+          "train": 12307,
+          "validation": 2768
+        },
+        "incident": {
+          "test": 428383
+        }
+      },
+      "incident_windows_by_entity_type": {
+        "host": 1,
+        "ip": 9,
+        "user": 3
+      },
+      "seconds": 75.3,
+      "windows_by_split": {
+        "gap": {
+          "background": 16
+        },
+        "test": {
+          "background": 3831,
+          "incident": 13
+        },
+        "train": {
+          "background": 3634,
+          "exfiltration": 576
+        },
+        "validation": {
+          "background": 1931,
+          "exfiltration": 130
+        }
+      }
+    },
+    "company_hosts": [
+      "cloud_share",
+      "inet-firewall",
+      "internal_employee_0",
+      "internal_employee_1",
+      "internal_employee_2",
+      "internal_employee_3",
+      "internal_employee_4",
+      "internal_employee_5",
+      "internal_employee_6",
+      "internal_share",
+      "intranet_server",
+      "mail",
+      "monitoring",
+      "vpn",
+      "webserver"
+    ],
+    "contract_problems": 0,
+    "events": 851789,
+    "sources": {
+      "auth-cloud_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-inet-firewall": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-internal_share": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-intranet_server": {
+        "events": 11,
+        "labelled": 4
+      },
+      "auth-mail": {
+        "events": 13,
+        "labelled": 0
+      },
+      "auth-vpn": {
+        "events": 0,
+        "labelled": 0
+      },
+      "auth-webserver": {
+        "events": 0,
+        "labelled": 0
+      },
+      "dns-inet-firewall": {
+        "events": 131787,
+        "labelled": 21492
+      },
+      "vpn-vpn": {
+        "events": 272,
+        "labelled": 1
+      },
+      "web-intranet_server": {
+        "events": 463873,
+        "labelled": 428116
+      },
+      "web-webserver": {
+        "events": 255833,
+        "labelled": 0
+      }
+    }
+  }
+}
