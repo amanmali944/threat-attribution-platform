@@ -10,8 +10,11 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (46)
-python -m pytest tests -q                    # whole backend suite (105)
+python -m pytest tests/detection -q          # Developer A tests (60)
+python -m pytest tests -q                    # whole backend suite (119)
+
+# Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
+python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
 ```
 
 ---
@@ -44,19 +47,57 @@ python -m pytest tests -q                    # whole backend suite (105)
 
 ---
 
-## Phase 1 — Attack corpus & ground truth
+## Phase 1 — Real-data corpus & ground truth
 
-**Status:** DEFERRED — not built
+**Status:** IN PROGRESS — 1a (Org X) done; 1b–1d pending
 
-### What happened
-- The plan called for a seeded generator producing normal activity plus four labelled attack scenarios. While starting this phase in the assistant session, that step was **halted by the tool's safety check** and the generator was **not written**. It was not retried or reworded.
-- No corpus files exist. `data/fixtures/` still holds only the platform's 4 sample events.
+### Decision history
+- The original plan was a seeded synthetic generator (normal activity + four labelled attack scenarios). When this phase was started in the assistant session, that step was **halted by the tool's safety check** and the generator was **not written**; it was not retried or reworded.
+- Decision (Oct 21, 2026, with the user): use **small slices of published datasets** instead. The database and cloud layers have no usable public labelled data, so they are **unvalidated** and must be reported that way. Candidates surveyed: AIT-LDS v2.0 (CC BY-NC-SA 4.0), LANL Multi-Source (12 GB), CERT insider (r4.2/r6.2), Web Server Log Dataset (MIT), SR-BH 2020 (CC0), an ATT&CK-labelled endpoint dataset (no download link found), DARPA OpTC (very large).
+- Order: 1a Org X (2.1 MB) → 1b labels and time-ordered splits → 1c Org Y (391 MB; real privilege escalation; check client-IP diversity before downloading) → 1d an AIT slice (multi-source, multi-step).
+- Raw and derived data live in `data/external/` (git-ignored; never committed).
 
-### Consequence
-Anything that needs *labelled windows* is blocked: training/evaluating fusion (Phase 4), the per-class precision/recall in Phases 3 and 8, and attribution accuracy against ground truth (Phase 6). Work that does not need labelled data (Phase 2, the rules engine, model mechanics) can proceed and is verified on unit fixtures only.
+### 1a — Web Server Log Dataset, Organization X (Zenodo 10.5281/zenodo.20001206, MIT)
+**Date:** Oct 21, 2026
 
-### Decision needed from the team
-Where does labelled data come from? Options: (a) the team writes the generator themselves, (b) adopt a published labelled dataset and map it to the canonical event format, (c) a small hand-written fixture set sufficient for unit tests only (cannot support honest evaluation numbers). Until decided, no evaluation figure should be quoted anywhere.
+**Download and handling:** `organization-x.zip`, 2,135,289 bytes, MD5 `b4bf79effa6f3ee1b9e53f278d916620` (matches Zenodo). Listed the members first (65 entries, no unsafe paths), then extracted into a fresh empty directory with a path-checked extractor. Python run with `-I` on all third-party data.
+
+**What the data is:** Apache access logs (15 rotated files), `auth.log`, `syslog`, and a ground-truth YAML of 39 text-pattern rules. 213,205 access lines, 2025-09-23 → 2025-10-07 (UTC). Client IPs are anonymised.
+
+**Findings about the data (these limit what Org X can be used for):**
+| Finding | Detail |
+| :--- | :--- |
+| **One client IP** | 213,192 of 213,205 requests come from `255.102.154.224` (probably a proxy in front of the server); the other 13 are `::1`. **No per-IP or per-user behaviour exists**, so Org X cannot evaluate entity-level detection. |
+| No user identity | Apache user field is `-` on every line. |
+| `auth.log` is noise | 4,334 lines: 4,328 cron session open/close, 2 sudo, 1 `sshd: Accepted`. No brute force. Not converted. |
+| Heavy benign monitors | HetrixTools and Uptime-Kuma bots are ~70,000 requests (33%). |
+| Labels are rules, not review | 639 events (0.30%) match `moderate` rules; 10,890 (5.1%) match the `strict` `dir_scan` rule. Rules key on user-agent and URL text, so a model can learn the rules. |
+
+**What was built:** `scripts/adapters/web_server_logs.py`: Apache combined-format parser (handles escaped quotes, timeout-style `"-"` requests, `-` bytes), timezone conversion to UTC, canonical `application/http_request` events, rule-based labelling into a **sidecar** `labels.jsonl` (never inside events), report with counts and checksums. Deterministic IDs `wsld-<file>-<line>`. Rotated files read oldest first.
+
+**Conversion result (real data):**
+| Measure | Result |
+| :--- | :--- |
+| Lines read | 213,205 |
+| Events written | **213,205** (0 unparsed — a first, naive regex missed 28 lines with escaped quotes; fixed) |
+| Contract problems (`validate_event`) | **0** |
+| Time | 102 s (single thread); `events.jsonl` 131.6 MB |
+| Rules file SHA-256 | `f5969561…cf2767` recorded in `report.json` |
+
+**Feature engine on real data (smoke test, not an evaluation):** 38,027 baseline + 23,341 test events → baseline fit 3.0 s, features 1.8 s, 290 vectors, **0 non-finite values**, replay identical, ~280 MB RSS, 0 events skipped. Only one entity type/entity (the proxy IP), so peer z-scores compare the entity with itself and are meaningless here.
+
+**Tests (`test_web_server_adapter.py`, 14):** parsing (UTC conversion, escaped quotes, timeout lines, garbage, bytes `-`), event contract validity and resolution, authenticated user entity, rule semantics (ALL patterns, case-insensitive, `code:` via status, `%` wildcard, strict vs moderate separation), numeric rotation order oldest-first, end-to-end conversion counts, byte-for-byte determinism, and two checks against the real data (every raw line accounted for: `events + unparsed == raw lines`; rules checksum matches). **14 passed.** Whole backend suite: **119 passed** (platform 59 + detection 60).
+
+**Mutation check (do the tests catch bugs?):** rule needs ANY instead of ALL ✔ caught · status code not injected into match text ✔ · rotation order reversed ✔ · escaped-quote support removed ✔.
+
+**Verdict:** Org X proves the converter, the contract validation and the feature engine on real logs. It **cannot** measure entity-level detection (single client IP, no users), so it is plumbing and regression data, not an evaluation set.
+
+**Known limitations:** label rules re-implemented against raw lines, not the authors' log2timeline pipeline (approximate); `%` treated as a wildcard; `auth.log` and `syslog` not converted; timestamps from Apache carry an explicit offset (+0700) and are converted correctly, but syslog lines (not converted) have no year or zone.
+
+### Next in Phase 1
+- **1c first check:** before downloading Org Y (390.8 MB), read just its access-log member to see whether client IPs are diverse (Org X's single proxy IP would make it useless for entity features too).
+- **1b:** event labels → window labels; time-ordered baseline / train / validation / test splits.
+- **1d:** AIT-LDS v2.0 `russellmitchell` slice (labelled multi-source, multi-step attack; 7.1 GB zip, so extract only chosen members).
 
 ---
 
@@ -127,6 +168,8 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. **Decide the Phase 1 data source** (above).
-2. Phase 3a — rules engine (needs only features; every rule gets a passing and a failing test).
-3. Phase 3b/3c — Isolation Forest and sequence model *mechanics* (fit/score separation, ECDF scoring, determinism) can be built and unit-tested without labelled data; training and evaluation wait for Phase 1.
+1. Phase 1c — check Org Y's client-IP diversity (read one member only) before downloading 391 MB.
+2. Phase 1b — window labels and time-ordered splits.
+3. Phase 3a — rules engine (needs only features; every rule gets a passing and a failing test).
+4. Phase 3b/3c — Isolation Forest and sequence model *mechanics* (fit/score separation, ECDF scoring, determinism) can be built and unit-tested now; training and evaluation need an entity-diverse dataset (Org Y or AIT).
+5. Phase 1d — AIT-LDS `russellmitchell` slice.

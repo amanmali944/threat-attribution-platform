@@ -86,14 +86,18 @@ Directory names follow `docs/ARCHITECTURE.md` (`services/detection/`, `services/
 | **Depends on** | Nothing |
 | **Done when** | Developer B acknowledges the contract; dependencies approved |
 
-### Phase 1 — Attack Corpus & Ground Truth
+### Phase 1 — Real-Data Corpus & Ground Truth (revised Oct 21, 2026)
+
+The original plan was a seeded synthetic generator. That route was dropped; v1 uses **small slices of published datasets** converted to the canonical event format by adapters.
 
 | Item | Detail |
 | :--- | :--- |
-| **Tasks** | Seeded generator producing normal background activity across identity, application, endpoint (host) and database layers for a small organisation (users, roles, apps, hosts, databases with criticality); inject four attack scenarios; vary timing, volume and ordering per seed; write `ground_truth.json` per scenario |
-| **Scenarios** | `scenario_01_bruteforce` (identity → application) · `scenario_02_account_takeover` (identity → application → database) · `scenario_03_lateral_movement` (identity → host → host) · `scenario_04_exfiltration` (application → database, bulk read) |
-| **Outputs** | `scripts/generate_corpus.py`, `data/corpus/**`, `data/corpus/assets.json` |
-| **Acceptance tests** | Same seed ⇒ byte-identical output · every event validates against `EventCreate` · every ground-truth event ID exists in its scenario |
+| **Approach** | One adapter per dataset in `scripts/adapters/`. Raw and derived data live in `data/external/` (git-ignored; some licences are non-commercial / share-alike). Labels go in a **sidecar** file, never inside events. Every run records dataset version, file checksums and rules checksum |
+| **Steps** | **1a** Web Server Log Dataset, Org X (2.1 MB, MIT): plumbing + application layer — **done** · **1b** event→window labels and time-ordered baseline / train / validation / test splits · **1c** Org Y (391 MB, a real privilege-escalation chain): first check client-IP diversity · **1d** AIT-LDS v2.0 `russellmitchell` slice: multi-source, multi-step attack with per-line step labels |
+| **Layer coverage** | identity, application, network, endpoint (partly). **No database or cloud layer** — no public labelled data exists; both are reported as unvalidated |
+| **Outputs** | `scripts/adapters/*.py`, derived data under `data/external/**/derived/` (not committed), small committed fixtures only |
+| **Acceptance tests** | Every source line accounted for (`events + unparsed == lines`) · all events pass `validate_event` · byte-identical output on rerun · ground-truth checksum recorded · mutation-checked tests |
+| **Known limits** | Org X has a single client IP and no users, so it cannot test entity-level detection; labels from rule sets measure agreement with the rules, not independent truth |
 | **Depends on** | Contract §1, §10 |
 
 ### Phase 2 — Entity Resolution & Feature Engine
@@ -240,7 +244,7 @@ Blocking or automated response, full graph database, graph neural networks, more
 | Phase | Status | Notes |
 | :--- | :--- | :--- |
 | 0 — Setup & contract | **Done** (Oct 21, 2026) | Contract + plan committed; CR-01 … CR-07 delivered by Developer B and verified on `main`; platform runs locally, 59/59 platform tests pass |
-| 1 — Corpus & ground truth | **Deferred** | Labelled data source still to be decided — see `logs.md`. Blocks training / evaluation in Phases 3b–8 |
+| 1 — Real-data corpus & ground truth | **In progress** | 1a Org X done (213,205 events, 0 contract problems; but one client IP, so plumbing only). 1b–1d pending. Entity-level training/evaluation still needs 1c/1d |
 | 2 — Resolution & features | **Done** (Oct 21, 2026) | 22 features, entity resolution, baseline; 46 tests pass; see `logs.md` |
 | 3 — Detectors | Not started | |
 | 4 — Fusion & calibration | Not started | |
@@ -248,4 +252,4 @@ Blocking or automated response, full graph database, graph neural networks, more
 | 6 — Attribution | Not started | |
 | 7 — Risk scoring | Not started | |
 | 8 — Evaluation | Not started | |
-| 9 — Integration & handoff | Blocked on CR-01 … CR-07 | |
+| 9 — Integration & handoff | Not started | CR-01 … CR-07 delivered by Developer B |

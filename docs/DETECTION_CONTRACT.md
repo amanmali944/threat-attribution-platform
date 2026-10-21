@@ -485,6 +485,8 @@ Accuracy is deliberately not reported (class imbalance makes it misleading). All
 
 ## 10. Corpus & Ground Truth Format
 
+> **Revised Oct 21, 2026.** v1 evaluates on small slices of *published datasets* converted by adapters in `scripts/adapters/` (see `DETECTION_PLAN.md`, Phase 1). Raw and derived data live in `data/external/` (git-ignored). Each adapter writes `events.jsonl` (canonical events), a **sidecar** `labels.jsonl` (`{event_id, labels:[{rule_id,label}], labels_strict:[...]}`; labels are never placed inside events) and a `report.json` (line counts, contract problems, label counts, rules checksum). The layout below applies to any small hand-built fixtures that are committed.
+
 ```
 data/
   corpus/
