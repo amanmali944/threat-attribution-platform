@@ -10,13 +10,14 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (91)
-python -m pytest tests -q                    # whole backend suite (150)
+python -m pytest tests/detection -q          # Developer A tests (126)
+python -m pytest tests -q                    # whole backend suite (185)
 
 # Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
 python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
 python -I scripts/adapters/syslog_auth.py <organization-y dir> <output dir> --tenant org-y --year 2025
 python -I scripts/build_org_y_windows.py <derived auth dir> data/specs/org_y_incident.json <windows dir>
+python -I scripts/evaluate_org_y.py <windows dir> data/specs/org_y_incident.json data/evaluation/phase3_org_y.json --model-dir <models dir>
 ```
 
 ---
@@ -248,6 +249,102 @@ Deliberately broke the code and confirmed a test fails each time:
 
 ---
 
+## Phase 3 — Detectors: rules (3a) and Isolation Forest (3b), first end-to-end result
+
+**Date:** Oct 21, 2026 · **Status:** 3a DONE · 3b DONE · 3c (sequence model) not started
+
+### In one paragraph
+Both detectors now run on real data and emit contract-valid alerts. On Org Y's single real incident, a generic rule raised the first alert in the **first 5-minute window** of the incident, and the best combination caught **15 of 21** incident windows with **~48 false alarms per day**. These numbers are optimistic (one incident, seen while building the labels and one feature) and must not be quoted as detection quality. The run also exposed one real flaw in the rule calibration, which is diagnosed below and left unfixed on this test set on purpose.
+
+### What was built
+| File | What it does |
+| :--- | :--- |
+| `backend/app/services/detection/envelope.py` | Builds and validates the Alert Envelope (contract §4); deterministic alert IDs |
+| `backend/app/services/detection/rules.py` | Rule set `rules-1.0.0` (9 rules), calibration of volume thresholds from background windows, serialisable |
+| `backend/app/services/detection/anomaly.py` | Isolation Forest `iforest-1.0.0`: one model per entity type, trained on background only, ECDF scores in [0,1], per-alert explanation |
+| `scripts/evaluate_org_y.py` | The evaluation protocol below; writes `data/evaluation/phase3_org_y.json` (committed, no IPs) and saves models to the git-ignored `derived/org-y/models/` |
+
+**Contract changes made in this phase** (all written into `docs/DETECTION_CONTRACT.md`):
+- **Feature set fs-1.1.0:** added `volume.login_count` and `volume.login_success_count`. Without them "a successful login" could not be expressed. **Disclosure:** added after the Org Y incident had been seen. Golden fixture regenerated and hand-checked; Org Y windows rebuilt (the leakage test flagged the stale fs-1.0.0 windows before the rebuild, as it should). Baselines from another feature set are now refused.
+- Alert `technique` may also be `reconnaissance` or `unknown` (anomaly detectors); evidence items carry `op`/`threshold` (rules) or `baseline_z` (Isolation Forest).
+
+### The rule set (rules-1.0.0)
+| Rule | Behaviour | Applies to | Threshold | Severity |
+| :--- | :--- | :--- | :--- | :--- |
+| RULE-IDN-001 | Brute-force login burst | user, ip | ≥10 logins, ≥90% failing, ≥10 failures in a row | low |
+| RULE-IDN-002 | Password spray from one source | ip | ≥5 accounts, ≥5 logins, ≥90% failing | medium |
+| RULE-IDN-003 | Successful login from a never-seen source | user | ≥1 success and a source IP new to this account | high |
+| RULE-IDN-004 | Successful login after repeated failures | ip | ≥1 success and ≥5 failures in a row | high |
+| RULE-PRIV-001 | Privileged command burst | user, host | calibrated: max(5, 99.9th percentile of background) | high |
+| RULE-PRIV-002 | Role or privilege change | user | ≥1 role change | medium |
+| RULE-PRIV-003 | Privileged activity at an unusual hour | user, host | off-hours and ≥1 privileged command | medium |
+| RULE-APP-001 | Web error burst (scanning) | ip | ≥20 requests, ≥50% errors | low |
+| RULE-DB-001 | Bulk data read | user | calibrated: max(10,000 rows, 99.9th percentile) | high |
+
+### Evaluation protocol (fixed before looking at any test output)
+1. Rule thresholds calibrated on **background windows of train + validation only** (12,470 windows).
+2. Isolation Forest trained on **train background** (11,889 windows); scores ranked against train + validation background.
+3. The test split (Apr 29 05:00 → May 1; 15,752 windows, 1.81 days) scored **once**. The 50 `unknown` windows are excluded from precision and recall; alerts on them are counted separately.
+4. Reported: ROC-AUC and average precision (PR-AUC), precision / recall / false alarms per day at fixed operating points, whether the incident was detected, and the delay to the first alert. Two baselines for context: random scoring and "event count only".
+
+### Results on the test split (21 incident windows, 15,681 background)
+| Detector | Incident windows caught | Precision | False alarms / day | First alert after incident start | ROC-AUC | Avg. precision |
+| :--- | ---: | ---: | ---: | :--- | ---: | ---: |
+| Random scoring (expected) | – | – | – | – | 0.50 | 0.0013 |
+| "Event count only" baseline | – | – | – | – | 0.908 | 0.028 |
+| Rules: any rule | 15 / 21 | 0.013 | 609 | 5 min | – | – |
+| Rules: high severity only | 14 / 21 | 0.143 | 46 | 5 min | – | – |
+| Isolation Forest (ranking) | – | – | – | – | 0.873 | 0.083 |
+| Isolation Forest, score ≥ 0.99 | 7 / 21 | 0.033 | 113 | 35 min | – | – |
+| Isolation Forest, score ≥ 0.999 | 3 / 21 | 0.250 | 5 | 85 min | – | – |
+| **High-severity rules OR Isolation Forest ≥ 0.999** | **15 / 21** | **0.147** | **48** | **5 min** | – | – |
+
+"5 min" = the alert is available at the end of the first incident window. Isolation Forest by entity type: host AP 0.79 (ROC 0.98, 6 incident windows), user AP 0.20 (ROC 0.99, 10), **IP AP 0.002 (ROC 0.59, 5) — no better than chance**.
+
+Per-rule fires on the test split (validation fires in brackets):
+| Rule | incident | background | unknown | (validation) |
+| :--- | ---: | ---: | ---: | ---: |
+| RULE-IDN-001 brute-force burst | 10 | 1,002 | 5 | (98) |
+| RULE-IDN-002 password spray | 0 | 301 | 0 | (2) |
+| RULE-IDN-003 success from never-seen source | 5 | **0** | 9 | (0) |
+| RULE-PRIV-001 privileged command burst | 11 | 84 | 1 | (8) |
+| RULE-PRIV-003 privileged at unusual hour | 2 | 5 | 0 | (1) |
+| IDN-004, PRIV-002, APP-001, DB-001 | 0 | 0 | 0 | (0) — nothing of that kind in this data |
+
+### What the numbers mean
+1. **The incident was detected quickly, but by a rule whose input was added after seeing it.** RULE-IDN-003 (successful login from a source the account never used) fired on the first incident window with zero background false alarms. It is a standard detection, but its feature was added after the incident was seen, so this is a demonstration, not evidence.
+2. **The brute-force alerts are not wrong, they are just not the incident.** RULE-IDN-001/002 raised 1,303 alerts (~720/day) on windows labelled `background`. Those windows really are hostile brute force; they are "background" only because our target is the compromise. This is exactly the alert-fatigue problem: real but low-value alerts drowning the one that matters. Phase 4 must aggregate and suppress them (one alert per source per period), not delete the rules.
+3. **Flaw found in rule calibration (RULE-PRIV-001).** 82 of its 84 background false alarms have exactly 19 privileged commands. That is root's routine hour: 18 cron log reads + 1 hourly root job, all in the :00 window. The calibrated threshold was the background maximum (19) and the rule fires at "≥", so **every routine hour fires**. The validation split already showed this (8 fires in 4 background hours), but the protocol had no validation gate to stop it. **Not fixed here**: changing it and re-scoring the same incident would be tuning on the test set. Post-hoc diagnosis only: at "strictly above 19" the rule would have fired on 10 incident and 2 background test windows.
+4. **Anomalous is not the same as malicious.** On this internet-facing server the "normal" IP is a brute-forcer hammering hundreds of attempts, so the Isolation Forest learns that hammering is normal — correctly. The intruder's IP logged in quietly once or twice, which is *not* anomalous in volume terms (IP ROC 0.59). The model is useful where the incident is a behaviour change on a host or account (privileged-command burst: host AP 0.79, user ROC 0.99).
+5. **ROC-AUC misleads under this imbalance (21 positives in 15,702).** "Event count only" has a higher ROC-AUC (0.908) than the Isolation Forest (0.873), yet a third of its average precision (0.028 vs 0.083). Average precision and false alarms per day are the numbers to watch; this is why the plan bans an accuracy headline.
+6. **Isolation Forest scores saturate.** Windows outside the training range get isolated at almost the same depth, so extreme windows tie near 1.0. Seen in a unit test (an extreme outlier scored 0.9967 against a fresh reference set) and in the top-10 list (several background windows at 0.9995–1.0).
+
+### Problems found during this phase and what was done
+| Problem | Found by | Action |
+| :--- | :--- | :--- |
+| Calibrated threshold equal to the routine maximum fires every routine hour | Test-split result; already visible on validation | Diagnosed and recorded; fix planned for rules-1.1.0, to be judged on unseen data (AIT), not on Org Y |
+| No way to express "successful login" | Writing RULE-IDN-003 | fs-1.1.0 (+2 features), disclosed as post-incident |
+| Stale fs-1.0.0 windows after the feature change | `test_labeling` real-data check | Windows rebuilt; labels unchanged (21 incident, 50 unknown) |
+| Isolation Forest score saturation | Unit test expected exactly 1.0 | Test now requires ≥ 0.99; behaviour documented |
+
+### Tests
+| Suite | Tests | Result |
+| :--- | ---: | :--- |
+| `test_rules.py` — every rule has a firing case and a near-miss; entity-type filtering; nearest-rank quantile; floor vs calibrated threshold; refusal to run uncalibrated; envelope validity, deterministic IDs, round trip, contract violations caught | 21 | passed |
+| `test_anomaly.py` — log transform, outlier vs background, determinism and input-order independence, no model for tiny types, explanations, alerts respect the threshold, reference set, metadata | 8 | passed |
+| `test_phase3_results.py` — committed results are arithmetically consistent, limits are attached, AP beats random, and **re-running the evaluation reproduces the committed file exactly** | 5 | passed |
+| `test_features.py` — +1 (baseline from another feature set refused), login counts checked by hand | 30 | passed |
+| Detection total / whole backend | 126 / 185 | **all passed** |
+
+**Mutation check: 8 / 8 caught** — entity-type filter removed, calibration floor ignored, "≥" treated as ">", quantile rank off by one, log transform removed, minimum-training-size check removed, explanations sorted the wrong way, training order not normalised.
+
+### Decisions carried into the next steps
+- **rules-1.1.0:** calibrated thresholds must be strictly above everything seen in background (plus a margin), and a **validation gate**: a rule that fires on more than 0.5% of validation background windows is flagged before any test scoring. Judged on AIT, not by re-scoring Org Y.
+- **Fusion (Phase 4)** must aggregate repeated brute-force alerts per source and time, and combine the strong signals (success from a new source, privileged burst, host/user anomaly scores). Supervised fusion needs labelled incidents outside the test split, so it needs AIT.
+- The Isolation Forest stays as a host/account behaviour-change detector; IP-level anomaly scores are not useful on noise-dominated servers.
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
@@ -256,6 +353,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. Phase 3a — rules engine (every rule gets a passing and a failing test; thresholds from train/validation background only).
-2. Phase 3b — Isolation Forest trained on Org Y train background, scored zero-shot on the test period (first end-to-end number, reported with the limits above).
-3. Phase 1d — AIT-LDS slice, required before any supervised fusion (Phase 4).
+1. **Phase 1d — AIT-LDS slice.** Needed for anything supervised and for an evaluation on an attack nobody has looked at yet (8 scenarios, per-line labels, days of benign activity).
+2. **rules-1.1.0** (strict calibrated thresholds + validation gate), judged on AIT.
+3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
+4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).

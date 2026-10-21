@@ -40,12 +40,20 @@ def fit(raw, config=FeatureConfig(), cohort_of=None):
 
 
 def test_catalogue_matches_contract_table():
-    """The 22 features in docs/DETECTION_CONTRACT.md section 3.1, in order."""
+    """The 24 features in docs/DETECTION_CONTRACT.md section 3.1 (fs-1.1.0)."""
     contract_text = (Path(__file__).resolve().parents[3] / "docs" / "DETECTION_CONTRACT.md").read_text(encoding="utf-8")
-    assert len(FEATURE_NAMES) == 22
+    assert len(FEATURE_NAMES) == 24
     for name in FEATURE_NAMES:
         assert f"`{name}`" in contract_text, f"{name} missing from contract"
-    assert C.FEATURE_SET_VERSION == "fs-1.0.0"
+    assert C.FEATURE_SET_VERSION == "fs-1.1.0"
+    assert "Feature catalogue (fs-1.1.0)" in contract_text
+
+
+def test_baseline_from_another_feature_set_is_refused():
+    baseline = fit([login("a", -86400, "u1", "203.0.113.9", "SUCCESS")])
+    baseline.feature_set_version = "fs-0.9.0"
+    with pytest.raises(ValueError, match="refit"):
+        vectors_of([login("b", 0, "u1", "203.0.113.9", "SUCCESS")], baseline)
 
 
 def test_vector_shape_and_types():
@@ -82,6 +90,7 @@ def test_login_feature_values():
     assert u1["timing.interarrival_cv"] == 0.0              # perfectly regular
     assert u1["diversity.distinct_targets"] == 1            # one host (idp-1)
     assert u1["diversity.distinct_accounts_from_ip"] == 1
+    assert u1["volume.login_count"] == 10 and u1["volume.login_success_count"] == 3
 
     u2 = vector_for(vecs, uid("u2"))["features"]
     assert u2["failure.login_failure_rate"] == 1.0
@@ -96,6 +105,8 @@ def test_login_feature_values():
     assert f["failure.max_consecutive_failures"] == 5       # F F F F F S F F S S F F
     assert f["diversity.distinct_accounts_from_ip"] == 2    # password-spray signal
     assert f["timing.mean_interarrival_s"] == 5.0
+    assert f["volume.login_count"] == 12 and f["volume.login_success_count"] == 3
+    assert u2["volume.login_count"] == 2 and u2["volume.login_success_count"] == 0
 
 
 def test_http_feature_values():
@@ -115,6 +126,7 @@ def test_http_feature_values():
     # paths: /a x5, /b x2, /c x1 of 8 -> -(5/8 log2 5/8 + 2/8 log2 2/8 + 1/8 log2 1/8)
     assert f["diversity.endpoint_entropy"] == pytest.approx(1.298795, abs=1e-6)
     assert f["timing.mean_interarrival_s"] == 10.0
+    assert f["volume.login_count"] == 0 and f["volume.login_success_count"] == 0   # no logins at all
 
 
 def test_database_and_privilege_feature_values():
@@ -372,6 +384,8 @@ def test_golden_fixture_hand_checked_values():
     assert admin["event_ids"] == ["evt-1003"]
     assert admin["features"]["volume.event_count"] == 1
     assert admin["features"]["failure.login_failure_rate"] == 0.0     # the logon succeeded
+    assert admin["features"]["volume.login_count"] == 1 and admin["features"]["volume.login_success_count"] == 1
+    assert all(v["feature_set_version"] == "fs-1.1.0" for v in golden)
     tor_ip = next(v for v in golden if v["entity_id"] == entity_id("ip", tenant, "185.220.101.4"))
     assert tor_ip["features"]["diversity.distinct_accounts_from_ip"] == 1
     cloud = next(v for v in golden if v["entity_id"] == entity_id("cloud_identity", tenant, "arn:aws:iam::123456789012:user/deployer"))

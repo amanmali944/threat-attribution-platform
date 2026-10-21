@@ -142,7 +142,7 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 ```json
 {
   "schema_version": "1.0",
-  "feature_set_version": "fs-1.0.0",
+  "feature_set_version": "fs-1.1.0",
   "tenant_id": "tenant-default-001",
   "entity_id": "ent-user-3f9a1c22",
   "entity_type": "user",
@@ -159,7 +159,9 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 }
 ```
 
-### 3.1 Feature catalogue (fs-1.0.0)
+### 3.1 Feature catalogue (fs-1.1.0)
+
+> **Change log.** fs-1.0.0 (Oct 21, 2026): 22 features. **fs-1.1.0 (Oct 21, 2026): added `volume.login_count` and `volume.login_success_count`** — without them a window with no logins and a window of only successful logins both showed `login_failure_rate = 0`, so "successful login from a never-seen source" could not be expressed. Added after the Org Y incident had been seen (see `logs.md`, Phase 3).
 
 | Feature | Family | Definition |
 | :--- | :--- | :--- |
@@ -167,6 +169,8 @@ Produced by `detection/features.py`. One vector per `(tenant_id, entity_id, wind
 | `volume.bytes_out` | Volume | Sum of `payload.bytes_out` |
 | `volume.rows_read` | Volume | Sum of `payload.rows_returned` for `SELECT` |
 | `volume.distinct_sessions` | Volume | Distinct `payload.session_id` |
+| `volume.login_count` | Volume | `user_login` events (fs-1.1.0) |
+| `volume.login_success_count` | Volume | `user_login` events with outcome `success` (fs-1.1.0) |
 | `failure.login_failure_rate` | Failure | Failed / total `user_login` |
 | `failure.max_consecutive_failures` | Failure | Longest run of failed logins |
 | `failure.http_error_rate` | Failure | `status_code >= 400` / total `http_request` |
@@ -235,11 +239,11 @@ Emitted by every detector (`detection/rules.py`, `detection/anomaly.py`, `detect
 | `detector` | Enum | `rules` \| `isolation_forest` \| `sequence` |
 | `detector_version` | String | Rule-set or model version that produced the alert |
 | `rule_id` | String \| null | Rule identifier (rules detector); `ML-IFOREST-001` / `ML-SEQ-001` for ML detectors so the existing `alerts.rule_id NOT NULL` column stays valid |
-| `technique` | Enum | MITRE ATT&CK tactic slug: `initial_access`, `credential_access`, `privilege_escalation`, `lateral_movement`, `collection`, `exfiltration`, `persistence`, `execution`, `discovery` |
+| `technique` | Enum | MITRE ATT&CK tactic slug: `reconnaissance`, `initial_access`, `credential_access`, `privilege_escalation`, `lateral_movement`, `collection`, `exfiltration`, `persistence`, `execution`, `discovery`, or `unknown` (anomaly detectors, which do not know the technique) |
 | `technique_id` | String \| null | MITRE ATT&CK technique ID |
 | `score` | Float | Detector-native score normalised to `[0,1]` (higher = more anomalous) |
 | `confidence` | Float \| null | Always `null` at this stage; set by fusion (§5) |
-| `evidence` | Array | Features that drove the decision, with entity baseline where available |
+| `evidence` | Array | Features that drove the decision. Every item has `feature` and `value`; rules add `op` and `threshold`; the Isolation Forest adds `baseline_z` (deviation from the training mean in training-std units) |
 
 ---
 

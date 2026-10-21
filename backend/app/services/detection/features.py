@@ -1,4 +1,4 @@
-"""Deterministic feature engine (contract section 3, feature set fs-1.0.0).
+"""Deterministic feature engine (contract section 3, feature set fs-1.1.0).
 
 One feature definition serves training, evaluation and live inference:
 
@@ -31,6 +31,8 @@ _FEATURE_SPEC: Tuple[Tuple[str, str], ...] = (
     ("volume.bytes_out", "float"),
     ("volume.rows_read", "float"),
     ("volume.distinct_sessions", "int"),
+    ("volume.login_count", "int"),
+    ("volume.login_success_count", "int"),
     ("failure.login_failure_rate", "float"),
     ("failure.max_consecutive_failures", "int"),
     ("failure.http_error_rate", "float"),
@@ -314,6 +316,8 @@ def _window_features(
     # ---- failure
     logins = [e for e in events if e.event_type == "user_login"]
     failures = sum(1 for e in logins if e.outcome == "failure")
+    f["volume.login_count"] = len(logins)
+    f["volume.login_success_count"] = sum(1 for e in logins if e.outcome == "success")
     f["failure.login_failure_rate"] = failures / len(logins) if logins else 0.0
     run = best = 0
     for e in logins:
@@ -436,6 +440,10 @@ def compute_features(
     config: FeatureConfig = FeatureConfig(),
 ) -> List[Dict[str, Any]]:
     """Feature Vectors (contract section 3) for every (entity, window) with events."""
+    if baseline is not None and baseline.feature_set_version != C.FEATURE_SET_VERSION:
+        raise ValueError(
+            f"baseline was fitted with {baseline.feature_set_version}, engine is {C.FEATURE_SET_VERSION}; refit it"
+        )
     ordered = sorted(events, key=_order)
     groups, refs = _group(ordered, config)
     vectors: List[Dict[str, Any]] = []

@@ -246,7 +246,7 @@ Blocking or automated response, full graph database, graph neural networks, more
 | 0 — Setup & contract | **Done** (Oct 21, 2026) | Contract + plan committed; CR-01 … CR-07 delivered by Developer B and verified on `main`; platform runs locally, 59/59 platform tests pass |
 | 1 — Real-data corpus & ground truth | **In progress** | 1a Org X done (plumbing only: one client IP). 1c Org Y done: 221,606 SSH/sudo events (406 source IPs) + 173,104 web events, 0 contract problems; almost all hostile traffic and no label for the compromise itself. 1b done for Org Y: incident / background / unknown window labels, time-ordered splits (21 incident windows, all in test; one incident, so zero-shot evaluation only). 1d (AIT) pending — required for supervised fusion |
 | 2 — Resolution & features | **Done** (Oct 21, 2026) | 22 features, entity resolution, baseline; 46 tests pass; see `logs.md` |
-| 3 — Detectors | Not started | |
+| 3 — Detectors | **3a + 3b done** (Oct 21, 2026) | rules-1.0.0 (9 rules) and iforest-1.0.0. Org Y zero-shot, one incident (optimistic): first alert in the first incident window; best combination 15/21 incident windows at ~48 false alarms/day. Calibration flaw diagnosed (threshold ties on routine cron) → rules-1.1.0 to be judged on AIT. 3c sequence model not started |
 | 4 — Fusion & calibration | Not started | |
 | 5 — Correlation | Not started | |
 | 6 — Attribution | Not started | |

@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Tuple
 
 SCHEMA_VERSION = "1.0"
-FEATURE_SET_VERSION = "fs-1.0.0"
+FEATURE_SET_VERSION = "fs-1.1.0"  # fs-1.1.0 added volume.login_count, volume.login_success_count
 
 LAYERS: Tuple[str, ...] = (
     "identity",
