@@ -759,6 +759,42 @@ In `russellmitchell` 7 benign alerts joined the intrusion incident. All were *re
 
 ---
 
+## Phase 6 — Attribution: entry point, attack path, reach
+**Date:** Oct 21, 2026 · **Status:** DONE (`graph-attribution-1.1.0`; 1.0.0 pre-registered and reported alongside)
+
+### Method (`backend/app/services/attribution/graph.py`, NetworkX)
+- **Graph:** canonical entities (inventory-mapped) as nodes; each event of the incident's alert-level Fused Alerts gives timestamped edges that cite it — login: address → account (`AUTHENTICATED_AS`), account → host (`LOGGED_INTO`); command: account → host (`EXECUTED_ON`); web: address → vhost / host (`HTTP_REQUEST`); DNS: address → domain (`DNS_QUERY`).
+- **Entry point:** the graph's root (see below); an authentication edge makes the entry the **account** used, with the address as `origin_entity_id`.
+- **Attack path:** one pass in time order computes the earliest arrival at every entity from the entry and the event that achieved it; the path to each reached asset follows those events back, so every step cites a real event and never goes back in time.
+- **Reached assets:** company hosts (inventory) and accounts; **blast radius:** reached count, potential reach (forward-reachable company hosts and accounts in the observed access graph of the test day), critical assets reached; **dwell time;** **confidence** = min(entry confidence, mean path score); **techniques;** **graph** in the platform's `GraphNode` / `GraphEdge` shape; a one-sentence **explanation**.
+
+### Evaluation against ground truth (`scripts/evaluate_attribution.py`; input = Phase 5 incidents from the leave-one-scenario-out pipeline)
+Ground truth per scenario: the entry is the event labelled `attacker_vpn` (stolen-certificate VPN login; first one if several sessions), its account and source address; reached hosts are the company hosts in any role of intrusion-labelled events; the privileged host is the host of `escalated_*` events.
+
+| Held-out (6 scenarios) | 1.0.0 (pre-registered) | **1.1.0 (post-hoc)** |
+| :--- | :--- | :--- |
+| Entry account correct | 4 / 6 | **6 / 6** |
+| Entry origin address correct | 4 / 6 | **6 / 6** |
+| Exact entry event | 4 / 6 | **6 / 6** |
+| Host of the privilege escalation reached | 6 / 6 | 6 / 6 |
+| Path valid (every step a real incident event, time-ordered) | 6 / 6 | 6 / 6 |
+| Reached assets: precision / recall / Jaccard | 1.00 / 0.56 / 0.56 | **1.00 / 0.69 / 0.69** |
+| Path precision (steps that are intrusion events) | 0.78 | **0.89** |
+| Dwell time exactly right | 4 / 6 | **6 / 6** |
+| Development (2): entry / privileged host / dwell exact | 2/2 · 2/2 · 1/2 | 2/2 · 2/2 · 1/2 |
+
+**What happened between 1.0.0 and 1.1.0 (disclosed):** 1.0.0 took the earliest alert-level edge as the entry. In `shaw` and `wilson` the web-scan alert on the VPN server's address covers a 5-minute window that also holds **other VPN users' requests made 1–2 minutes before the attacker logged in**, so the "entry" was a benign request. The contract calls the entry the graph's *root*; 1.1.0 implements that literally (no in-edge at all — the VPN server cannot be a root because the stolen-credential login points into it). The change was decided **after** these two held-out errors were seen, so the 1.1.0 held-out figures are post-hoc; 1.1.0 changes nothing on the development scenarios or on the 4 held-out scenarios 1.0.0 already got right, and only new data can confirm it. 1.0.0 stays the pre-registered result.
+
+**Remaining errors and limits:**
+- **Reached recall 0.69:** the ground truth also counts hosts the attack touched only indirectly (e.g. the mail server resolving names during the service scan); the path claims only hosts it can prove a time-respecting route to. Precision is 1.0 everywhere.
+- **`russellmitchell` dwell time 15 h 12 m vs 1 h 37 m:** the Phase 5 hub merge (review-level benign VPN logins joined the incident) stretches its last-seen time; the entry and path are still right.
+- `wheeler` dwell time 10 h 17 m is right: both VPN sessions are one intrusion.
+
+### Tests
+`test_attribution_graph.py` (11): entry is the account with its origin; time-respecting path citing real events; reached assets with inventory criticality, blast radius, dwell, confidence, explanation; platform graph shape; the root rule ignores other users' traffic on a shared address (1.0.0 picks it, 1.1.0 does not); review-level alerts do not start the story; potential reach from the observed access graph; an edge is never used before its source was reached; external destinations are not company assets; edges by event type; incidents without events refused. `test_phase6_results.py` (4): both methods on all 8, pooled = sum, every path valid, **no identifiers in the committed file**. **Mutation check: 4 / 4 real defects caught** (root rule ignoring in-degree, authentication not resolved to the account, review-level alerts starting the story, external entities counted as assets); a fifth (dropping the time guard) is an *equivalent mutant* — events are processed in time order, so the guard can never be false; kept as a defensive invariant. Whole suite: **336 passed**.
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
@@ -769,6 +805,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 1. ~~Held-out evaluation~~ done (Phase 3e).
 2. ~~Phase 4 final~~ done.
-3. ~~Phase 5 correlation~~ done. **Phase 6 attribution** next: per-incident graph, entry point, time-respecting path, reached assets, blast radius, dwell time, explanation — checked against each scenario's ground truth (the VPN login is the entry; the intranet server is reached).
+3. ~~Phase 5 correlation~~ and ~~Phase 6 attribution~~ done.
+4. **Phase 7 risk scoring** (contract §8: time-decayed, criticality-weighted, contributors), **Phase 8** one-command evaluation harness, **Phase 9** integration with the platform API.
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).

@@ -1,0 +1,672 @@
+{
+  "input": "Phase 5 incidents (leave-one-scenario-out pipeline)",
+  "methods": [
+    "graph-attribution-1.0.0",
+    "graph-attribution-1.1.0"
+  ],
+  "pooled": {
+    "graph-attribution-1.0.0": {
+      "development": {
+        "dwell_exact": "1/2",
+        "entry_account_correct": "2/2",
+        "entry_event_correct": "2/2",
+        "entry_origin_correct": "2/2",
+        "mean_confidence": 0.8802,
+        "mean_path_precision": 1.0,
+        "mean_reached_jaccard": 0.6667,
+        "mean_reached_precision": 1.0,
+        "mean_reached_recall": 0.6667,
+        "path_valid": "2/2",
+        "privileged_host_reached": "2/2",
+        "scenarios": 2
+      },
+      "held-out": {
+        "dwell_exact": "4/6",
+        "entry_account_correct": "4/6",
+        "entry_event_correct": "4/6",
+        "entry_origin_correct": "4/6",
+        "mean_confidence": 0.9811,
+        "mean_path_precision": 0.7778,
+        "mean_reached_jaccard": 0.5556,
+        "mean_reached_precision": 1.0,
+        "mean_reached_recall": 0.5556,
+        "path_valid": "6/6",
+        "privileged_host_reached": "6/6",
+        "scenarios": 6
+      }
+    },
+    "graph-attribution-1.1.0": {
+      "development": {
+        "dwell_exact": "1/2",
+        "entry_account_correct": "2/2",
+        "entry_event_correct": "2/2",
+        "entry_origin_correct": "2/2",
+        "mean_confidence": 0.8802,
+        "mean_path_precision": 1.0,
+        "mean_reached_jaccard": 0.6667,
+        "mean_reached_precision": 1.0,
+        "mean_reached_recall": 0.6667,
+        "path_valid": "2/2",
+        "privileged_host_reached": "2/2",
+        "scenarios": 2
+      },
+      "held-out": {
+        "dwell_exact": "6/6",
+        "entry_account_correct": "6/6",
+        "entry_event_correct": "6/6",
+        "entry_origin_correct": "6/6",
+        "mean_confidence": 0.9854,
+        "mean_path_precision": 0.8889,
+        "mean_reached_jaccard": 0.6945,
+        "mean_reached_precision": 1.0,
+        "mean_reached_recall": 0.6945,
+        "path_valid": "6/6",
+        "privileged_host_reached": "6/6",
+        "scenarios": 6
+      }
+    }
+  },
+  "post_hoc": {
+    "graph-attribution-1.1.0": "entry = graph root; decided AFTER the 1.0.0 entry errors on two held-out scenarios (shaw, wilson) were seen"
+  },
+  "pre_registered": "graph-attribution-1.0.0",
+  "scenarios": {
+    "fox": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.992337,
+          "dwell_exact": true,
+          "dwell_time_seconds": 4549,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 4549,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.992337,
+          "dwell_exact": true,
+          "dwell_time_seconds": 4549,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 4549,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        }
+      },
+      "role": "development"
+    },
+    "harrison": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.972433,
+          "dwell_exact": true,
+          "dwell_time_seconds": 5408,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 5408,
+          "ground_truth_hosts": 4,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.5,
+          "reached_precision": 1.0,
+          "reached_recall": 0.5,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.972433,
+          "dwell_exact": true,
+          "dwell_time_seconds": 5408,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 5408,
+          "ground_truth_hosts": 4,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.5,
+          "reached_precision": 1.0,
+          "reached_recall": 0.5,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        }
+      },
+      "role": "held-out"
+    },
+    "russellmitchell": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.767974,
+          "dwell_exact": false,
+          "dwell_time_seconds": 54722,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 5826,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.767974,
+          "dwell_exact": false,
+          "dwell_time_seconds": 54722,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 5826,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        }
+      },
+      "role": "development"
+    },
+    "santos": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.983607,
+          "dwell_exact": true,
+          "dwell_time_seconds": 2634,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 2634,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.983607,
+          "dwell_exact": true,
+          "dwell_time_seconds": 2634,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 2634,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1078",
+            "T1595",
+            "T1003.008",
+            "T1548"
+          ]
+        }
+      },
+      "role": "held-out"
+    },
+    "shaw": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 1,
+            "potential_reach_count": 1,
+            "reached_count": 1
+          },
+          "confidence": 0.955224,
+          "dwell_exact": false,
+          "dwell_time_seconds": 2757,
+          "entry_account_correct": false,
+          "entry_event_correct": false,
+          "entry_host_reached_first": false,
+          "entry_origin_correct": false,
+          "ground_truth_dwell_seconds": 2649,
+          "ground_truth_hosts": 2,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 1,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 1,
+          "reached_jaccard": 0.5,
+          "reached_precision": 1.0,
+          "reached_recall": 0.5,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1003.008",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.981009,
+          "dwell_exact": true,
+          "dwell_time_seconds": 2649,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 2649,
+          "ground_truth_hosts": 2,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 1.0,
+          "reached_precision": 1.0,
+          "reached_recall": 1.0,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1003.008",
+            "T1548"
+          ]
+        }
+      },
+      "role": "held-out"
+    },
+    "wardbeck": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 1.0,
+          "dwell_exact": true,
+          "dwell_time_seconds": 2719,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 2719,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1003.008",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 1.0,
+          "dwell_exact": true,
+          "dwell_time_seconds": 2719,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 2719,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 1.0,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1003.008",
+            "T1548"
+          ]
+        }
+      },
+      "role": "held-out"
+    },
+    "wheeler": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.9819,
+          "dwell_exact": true,
+          "dwell_time_seconds": 37033,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 37033,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 0.6667,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1003.008",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 0,
+            "reached_count": 2
+          },
+          "confidence": 0.9819,
+          "dwell_exact": true,
+          "dwell_time_seconds": 37033,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 37033,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 0.6667,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1003.008",
+            "T1548"
+          ]
+        }
+      },
+      "role": "held-out"
+    },
+    "wilson": {
+      "methods": {
+        "graph-attribution-1.0.0": {
+          "blast_radius": {
+            "critical_assets_reached": 1,
+            "potential_reach_count": 1,
+            "reached_count": 1
+          },
+          "confidence": 0.993548,
+          "dwell_exact": false,
+          "dwell_time_seconds": 3227,
+          "entry_account_correct": false,
+          "entry_event_correct": false,
+          "entry_host_reached_first": false,
+          "entry_origin_correct": false,
+          "ground_truth_dwell_seconds": 3110,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application"
+          ],
+          "path_precision": 0.0,
+          "path_steps": 1,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 1,
+          "reached_jaccard": 0.3333,
+          "reached_precision": 1.0,
+          "reached_recall": 0.3333,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1548"
+          ]
+        },
+        "graph-attribution-1.1.0": {
+          "blast_radius": {
+            "critical_assets_reached": 2,
+            "potential_reach_count": 1,
+            "reached_count": 2
+          },
+          "confidence": 0.993548,
+          "dwell_exact": true,
+          "dwell_time_seconds": 3110,
+          "entry_account_correct": true,
+          "entry_event_correct": true,
+          "entry_host_reached_first": true,
+          "entry_origin_correct": true,
+          "ground_truth_dwell_seconds": 3110,
+          "ground_truth_hosts": 3,
+          "path_cites_incident_events": true,
+          "path_layers": [
+            "application",
+            "identity"
+          ],
+          "path_precision": 0.6667,
+          "path_steps": 3,
+          "path_time_ordered": true,
+          "privileged_host_reached": true,
+          "reached_hosts": 2,
+          "reached_jaccard": 0.6667,
+          "reached_precision": 1.0,
+          "reached_recall": 0.6667,
+          "techniques": [
+            "T1595",
+            "T1078",
+            "T1548"
+          ]
+        }
+      },
+      "role": "held-out"
+    }
+  },
+  "seconds": 226.4
+}

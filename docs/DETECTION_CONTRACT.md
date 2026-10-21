@@ -402,7 +402,7 @@ Produced by `attribution/graph.py`. The causal account of one incident — the c
 
 | Field | Definition |
 | :--- | :--- |
-| `entry_point` | Earliest anomalous root node of the incident graph (no anomalous in-edge preceding it) |
+| `entry_point` | Root of the incident graph built from alert-level evidence: among nodes with **no in-edge at all**, the one whose first out-edge is earliest (`graph-attribution-1.1.0`; 1.0.0 used "no in-edge preceding it", which picked other users' traffic on a shared address). If that edge is an authentication, the entry is the **account** used and `entry_point.origin_entity_id` is the address it came from |
 | `attack_path` | Ordered, time-respecting edges from entry point to each reached asset; each edge cites the event that proves it |
 | `reached_assets` | Assets the attacker actually touched after entry |
 | `blast_radius.reached_count` | Distinct entities touched after entry |
