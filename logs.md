@@ -795,6 +795,31 @@ Ground truth per scenario: the entry is the event labelled `attacker_vpn` (stole
 
 ---
 
+## Phase 7 — Explainable risk scoring
+**Date:** Oct 21, 2026 · **Status:** DONE
+
+### Method (`backend/app/services/attribution/risk.py`, contract §8)
+`score = 100 × (1 − Π(1 − confidence_i × weight_i × 2^(−age_i / half-life)))` over an incident's (or entity's) Fused Alerts; confidence = the calibrated fusion confidence; **weight = 0.5 + 0.1 × criticality** (1 → 0.6 … 5 → 1.0) where criticality is the highest of the company hosts the alert touched (asset inventory); half-life 24 h; levels low < 25 ≤ medium < 50 ≤ high < 75 ≤ critical. Every contribution is listed (source, reason with the rules that fired, confidence, weight, age, decayed contribution), sorted by size; a non-zero score always has contributors.
+
+### Evaluation (`scripts/evaluate_risk.py`; every Phase 5 incident scored at the end of its scenario's test period)
+| Scenario | Role | Incidents | Intrusion rank | Intrusion score (level) | Highest benign incident |
+| :--- | :--- | ---: | ---: | :--- | ---: |
+| russellmitchell | dev | 4 | 1 | 96.0 (critical) | 4.6 |
+| fox | dev | 2 | 1 | 86.1 (critical) | 78.5 |
+| harrison | held-out | 4 | 1 | 98.3 (critical) | 8.4 |
+| santos | held-out | 1 | 1 | 99.3 (critical) | – |
+| shaw | held-out | 1 | 1 | 87.6 (critical) | – |
+| wardbeck | held-out | 2 | 1 | 99.5 (critical) | 45.8 |
+| wheeler | held-out | 1 | 1 | 99.9 (critical) | – |
+| wilson | held-out | 7 | **2** | 84.8 (critical) | **92.5** |
+
+The intrusion is **critical in 8 / 8** and **ranked first in 7 / 8** (held-out 5 / 6). Two benign incidents reached high / critical in total (one in `fox`, one in `wilson`). **`wilson` explained:** risk is measured at the end of a two-day test period, 36 hours after the intrusion ended; a benign alert on the next evening is fresher and decays less — time decay doing what it is designed to do, not tuned away. A queue for analysts should show the score *and* the incident's first-seen time.
+
+### Tests
+`test_risk.py` (6): the formula on independent contributions, the half-life halves a contribution, higher criticality ranks higher at equal confidence, level boundaries and the empty score, contributors always present and sorted, incident / entity risk from member alerts with inventory criticality. `test_phase7_results.py` (2): ranks, levels and explanations consistent, pooled counts, no identifiers.
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
