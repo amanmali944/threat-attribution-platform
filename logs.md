@@ -10,8 +10,8 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (151)
-python -m pytest tests -q                    # whole backend suite (210)
+python -m pytest tests/detection -q          # Developer A tests (176)
+python -m pytest tests -q                    # whole backend suite (235)
 
 # Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
 python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
@@ -21,6 +21,8 @@ python -I scripts/evaluate_org_y.py <windows dir> data/specs/org_y_incident.json
 python -I scripts/convert_ait_scenario.py data/external/ait/russellmitchell data/external/ait/derived/russellmitchell --scenario russellmitchell --year 2022
 python -I scripts/build_ait_windows.py data/external/ait/derived/russellmitchell data/specs/ait_russellmitchell.json data/external/ait/windows/russellmitchell-asis
 python -I scripts/build_ait_windows.py data/external/ait/derived/russellmitchell data/specs/ait_russellmitchell.json data/external/ait/windows/russellmitchell-clean --clean-baseline
+python -I scripts/evaluate_ait.py data/external/ait/windows/russellmitchell-asis data/specs/ait_russellmitchell.json data/external/ait/derived/russellmitchell data/evaluation/phase3_ait_russellmitchell_asis.json
+python -I scripts/evaluate_ait.py data/external/ait/windows/russellmitchell-clean data/specs/ait_russellmitchell.json data/external/ait/derived/russellmitchell data/evaluation/phase3_ait_russellmitchell_clean.json
 ```
 
 ---
@@ -453,6 +455,96 @@ Per-rule fires on the test split (validation fires in brackets):
 
 ---
 
+## Phase 3 (continued) — rules-1.1.0 and the first unseen evaluation (AIT `russellmitchell`)
+**Date:** Oct 21, 2026 · **Status:** DONE
+
+### In one paragraph
+On the first dataset the detectors were not built around, the system catches **the loud part of the attack and nothing else**. At fixed operating points it flags 1 of 10 incident windows (the 7,719-request web scan at 03:55), with **0 false alarms in a full day**, first alert 60 minutes after the intrusion began. It misses the stolen-certificate VPN entry, the DNS discovery and the privilege escalation, and it misses the exfiltration completely. The reasons are specific and measurable (cold start, a shared NAT address, Isolation Forest saturation, no DNS features), and none of them was tuned away after seeing the result.
+
+### What was built
+| File | What it does |
+| :--- | :--- |
+| `backend/app/services/detection/rules.py` | **rules-1.1.0** (now the default) next to rules-1.0.0, selected by `RuleEngine(ruleset=...)`; `CalibrationPolicy`; `gate()` (validation gate); disabled rules stay silent unless `include_disabled=True`; `to_dict` / `from_dict` carry the rule set, ops, gate and disabled rules |
+| `backend/app/services/detection/evaluation.py` (new) | shared metrics for one *task* (positive label vs background, other labels excluded): `operating_point`, `task_ranking`, `ranking_metrics`, `latency_minutes` |
+| `scripts/evaluate_ait.py` (new) | the AIT protocol below; per-rule, per-window and per-stage tables; saves models to a git-ignored folder |
+| `scripts/evaluate_org_y.py` | pinned to `rules-1.0.0` (the rule set its committed result was produced with) — the reproduction test still passes byte-for-byte |
+| `data/evaluation/phase3_ait_russellmitchell_{asis,clean}.json` | committed results (entity IDs are hashes; checked: no IP addresses or user names) |
+
+### rules-1.1.0 (decided on Org Y before AIT was opened)
+| | rules-1.0.0 | rules-1.1.0 |
+| :--- | :--- | :--- |
+| Calibrated bound | 0.999 quantile of background | background **maximum × 1.25** |
+| Comparison | `>=` (a tie with the routine maximum fires) | strictly `>` the bound; the floor stays an inclusive minimum (`>=`) |
+| Validation gate | none | calibrate on **train**, then any rule firing on **> 0.5 %** of validation background windows is turned off before the test |
+
+### Evaluation protocol (fixed in code before the test split was scored)
+- **Training pools.** *as-is*: every train / validation window, no labels used before the test (the exfiltration is inside, as it would be in production). *clean-baseline*: the same minus exfiltration windows (label-informed, disclosed).
+- **rules-1.1.0** (primary): calibrate on train pool → gate on validation pool → score test once. **rules-1.0.0** (comparison): calibrate on train + validation, no gate.
+- **Isolation Forest:** fit on train pool, ECDF reference train + validation.
+- **Two tasks:** incident vs background (exfiltration excluded) and exfiltration vs background (incident excluded). An alert on the other attack class is reported, never counted as a false alarm.
+- **Stages:** each incident window is mapped from its AIT step labels to entry / discovery / web attack / privilege; a stage is detected if any of its windows is flagged.
+
+### Results (test = Jan 24, 992 windows: 10 incident, 167 exfiltration, 815 background)
+**Incident task** — identical for both variants except the Isolation Forest false alarms:
+| Decision | Incident windows flagged | False alarms / day | Stages detected |
+| :--- | ---: | ---: | :--- |
+| rules-1.1.0, any rule | 1 / 10 | 0 | web attack (discovery counted only because the same window holds the service scan) |
+| rules-1.1.0, high severity | 0 / 10 | 0 | — |
+| rules-1.0.0, any rule | 1 / 10 | 0 | same as 1.1.0 |
+| Isolation Forest ≥ 0.99 | 1 / 10 | 1 (as-is) · 3 (clean) | web attack |
+| Isolation Forest ≥ 0.999 | 0 / 10 | 0 | — |
+| rules-1.1.0 any OR IF ≥ 0.999 | 1 / 10 | 0 | web attack |
+
+| Ranking (incident) | ROC-AUC | Average precision |
+| :--- | ---: | ---: |
+| Isolation Forest, all windows (as-is / clean) | 0.563 / 0.602 | 0.092 / 0.093 |
+| Isolation Forest, **IP windows only** (as-is / clean) | **0.932 / 0.938** | 0.146 / 0.146 |
+| Event count only (baseline) | 0.536 | 0.130 |
+| Random | 0.5 | 0.012 |
+
+**Exfiltration task** — no decision flags a single exfiltration window in either variant.
+| Ranking (exfiltration) | ROC-AUC | Average precision |
+| :--- | ---: | ---: |
+| Isolation Forest, as-is | **0.076** (worse than random) | 0.094 |
+| Isolation Forest, clean-baseline | 0.882 | 0.480 |
+| Event count only | 0.631 | 0.245 |
+| Random | 0.5 | 0.170 |
+
+**Validation gate:** every rule fired on 0 % of validation background — nothing was turned off. rules-1.0.0 and 1.1.0 give the same result here: AIT has no cron-driven sudo, so the tie problem never arises.
+
+### Why each stage was missed (from the per-window table)
+| Stage | Windows | Why nothing fired |
+| :--- | ---: | :--- |
+| Entry (VPN login with stolen certificate) | IP 1 event, user 1 event | jhall has 2 prior VPN logins (< 20): cold start, so `novelty.new_source_ip` stays 0 and RULE-IDN-003 cannot fire. No user model in the Isolation Forest (13 training windows < 20). The IP window scored 0.983 but ties with ordinary single-login windows |
+| Discovery (DNS brute force, network scan) | 5, mostly on the shared NAT address | mixed with normal users' queries on the same address (volume z = 4.3 at most); no rule covers DNS |
+| Web attack (dirb, wpscan, webshell) | 2 | **caught** by RULE-APP-001 (low severity) on the 7,719-event window; the 13-event window is not |
+| Privilege (su, sudo cat /etc/shadow) | host 3 ops, user 2, user 1 | RULE-PRIV-001 needs ≥ 5 privileged ops (floor); RULE-PRIV-003 needs a warm entity for "off hours" and the host has **no history at all**; no host or user model in the Isolation Forest |
+| Exfiltration | 167 | as-is: it is 25 % of the IP training windows, so the model learns it as normal (ROC 0.08). Clean: ranked well (0.88) but never above 0.99. fs-1.1.0 has no DNS features (query length is the obvious tell: 203 characters on the first exfiltration query) |
+
+### Problems found and what was done
+| Problem | How found | Action |
+| :--- | :--- | :--- |
+| **Isolation Forest saturates beyond the training range:** the 7,719-event window scores 0.998, tied with an ordinary evening window, because splits are drawn inside the training range — "far beyond" and "just beyond" land in the same leaf | top-10 table | Recorded. Not fixable inside the Isolation Forest; it argues for fusing it with measures that do extrapolate (peer z-scores, rule hits) in Phase 4 |
+| **Cold start silences the start and the end of the attack** (jhall: 2 logins; intranet host: 0 events before the test) | per-window table | Recorded, not tuned. Candidate: a cohort comparison for entities without history, and "first-ever privileged operation", decided on this scenario and judged on others |
+| Unmodelled windows get score 0 in the ranking, which pulls the all-window ROC down (0.93 on IP windows → 0.56 overall) | per-type ranking | Both figures reported; fusion must treat "no model" as missing, not as "normal" |
+| rules-1.0.0 evaluator would silently pick up the new default | full test suite (Org Y reproduction) | `evaluate_org_y.py` pinned to `rules-1.0.0` |
+
+### Tests
+| File | Count | What is covered |
+| :--- | ---: | :--- |
+| `test_rules.py` | 29 (+8) | every rule fires / near miss under rules-1.1.0; 1.0.0 thresholds unchanged; 1.1.0 bound = max × 1.25 with `>`, floor stays `>=`; **a tie with the background maximum fires in 1.0.0 and not in 1.1.0** (the Org Y flaw); floor fallback for both rule sets; unknown rule set rejected; gate disables only the over-budget rule with the right counts, disabled rules silent unless asked, widened budget, recalibration clears the gate, 1.0.0 has no gate; round trip keeps rule set, ops and disabled rules |
+| `test_evaluation.py` (new) | 7 | task subsets, operating-point counts and rates, alerts on another attack class not counted as false alarms, empty decisions, length check, ranking ignores excluded labels, latency |
+| `test_phase3_ait_results.py` (new) | 10 | for both variants: limits travel with the numbers; every operating point is arithmetically consistent; stage coverage agrees with the per-window table; gate report agrees with disabled rules; **re-running the evaluation reproduces the committed file exactly** |
+
+**Mutation check: 6 / 6 caught** (strict bound made inclusive, margin dropped, gate comparison changed, disabled rules still firing, alerts on another class counted as false alarms, task subset keeping every label). Whole backend suite: **235 passed** (platform 59 + detection 176).
+
+### What this means
+1. **This is the honest baseline of the system** on unseen data: precise (0 false alarms per day), low recall (1 of 4 stages). Org Y's 15 / 21 was flattered by one loud, seen incident.
+2. **`russellmitchell` is now a development scenario.** Its results have been seen, so any change made from here (cold-start handling, DNS features, fusion) must be judged on *other* AIT scenarios. Getting them is the next step.
+3. The Isolation Forest is useful as a **ranker inside one entity type** (ROC 0.93 on IP windows), not as a stand-alone alarm. That is a fusion input, which is how the plan uses it anyway.
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
@@ -461,7 +553,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. **rules-1.1.0** (strict calibrated thresholds + validation gate) and the Isolation Forest, evaluated on AIT — labels and splits are done (Phase 1b AIT).
-2. More AIT scenarios (same slice) for supervised fusion.
+1. **More AIT scenarios (same slice)** — `russellmitchell` is now the development scenario; the others are the held-out test for every change from here, and fusion needs more than one incident.
+2. **fs-1.2.0 candidates**, decided on `russellmitchell`, judged on the other scenarios: DNS features (query length, label count, distinct subdomains per domain) and cold-start handling (cohort comparison for entities without history, first-ever privileged operation).
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).

@@ -98,7 +98,7 @@ def main() -> int:
     first_incident_window = min(r["window_start"] for r in test if r["label"] == "incident")
 
     # ---------------------------------------------------------------- rules
-    engine = RuleEngine().calibrate(bg_trval)
+    engine = RuleEngine(ruleset="rules-1.0.0").calibrate(bg_trval)   # the rule set this result was produced with
     per_rule = defaultdict(Counter)
     validation_fires = Counter()
     test_flags_any, test_flags_high = [], []

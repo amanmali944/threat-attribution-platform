@@ -55,8 +55,8 @@ CASES = [
      dict(volume__login_success_count=1, failure__max_consecutive_failures=5),
      dict(volume__login_success_count=0, failure__max_consecutive_failures=50)),
     ("RULE-PRIV-001", "host",
-     dict(privilege__privileged_ops=19),                      # threshold = background max (19)
-     dict(privilege__privileged_ops=18)),
+     dict(privilege__privileged_ops=24),                      # must exceed background max 19 x 1.25 = 23.75
+     dict(privilege__privileged_ops=23)),
     ("RULE-PRIV-002", "user",
      dict(privilege__role_changes=1),
      dict(privilege__role_changes=0)),
@@ -104,16 +104,83 @@ def test_nearest_rank_quantile():
         nearest_rank_quantile([], 0.5)
 
 
-def test_calibrated_threshold_is_max_of_floor_and_background_quantile(engine):
+def test_v100_threshold_is_max_of_floor_and_background_quantile():
+    engine = RuleEngine(ruleset="rules-1.0.0").calibrate(background())
     assert engine.thresholds["RULE-PRIV-001"]["host"] == 19        # background max beats the floor of 5
     assert engine.thresholds["RULE-PRIV-001"]["user"] == 5         # background max 2 < floor 5
     assert engine.thresholds["RULE-DB-001"]["user"] == 10000       # floor
     assert engine.calibration["background_windows_by_type"] == {"host": 20, "user": 50}
 
 
-def test_a_type_with_no_background_falls_back_to_the_floor():
-    engine = RuleEngine().calibrate([])
+def test_v110_bound_is_background_max_plus_margin_and_strict(engine):
+    assert engine.ruleset == "rules-1.1.0"
+    assert engine.thresholds["RULE-PRIV-001"]["host"] == pytest.approx(23.75)   # max 19 x 1.25
+    assert engine.threshold_ops["RULE-PRIV-001"]["host"] == ">"
+    assert engine.thresholds["RULE-PRIV-001"]["user"] == 5                      # 2 x 1.25 < floor 5
+    assert engine.threshold_ops["RULE-PRIV-001"]["user"] == ">="                # the floor stays inclusive
+    assert "RULE-PRIV-001" in fired(engine, vec("user", privilege__privileged_ops=5))
+
+
+def test_v110_no_longer_fires_on_a_tie_with_the_background_maximum():
+    # The Org Y flaw: a window equal to the routine maximum fired every routine hour under 1.0.0.
+    tie = vec("host", privilege__privileged_ops=19)
+    assert "RULE-PRIV-001" in fired(RuleEngine(ruleset="rules-1.0.0").calibrate(background()), tie)
+    assert "RULE-PRIV-001" not in fired(RuleEngine().calibrate(background()), tie)
+
+
+@pytest.mark.parametrize("ruleset", ["rules-1.0.0", "rules-1.1.0"])
+def test_a_type_with_no_background_falls_back_to_the_floor(ruleset):
+    engine = RuleEngine(ruleset=ruleset).calibrate([])
     assert engine.thresholds["RULE-PRIV-001"] == {"user": 5, "host": 5}
+    assert "RULE-PRIV-001" in fired(engine, vec("host", privilege__privileged_ops=5))
+
+
+def test_unknown_ruleset_is_rejected():
+    with pytest.raises(ValueError, match="unknown rule set"):
+        RuleEngine(ruleset="rules-9.9.9")
+
+
+# ------------------------------------------------------------------ validation gate
+
+
+def noisy_validation():
+    """200 user windows; 2 of them (1%) look like a brute-force burst, nothing else fires."""
+    quiet = [vec("user", entity_id=f"ent-user-{i:08d}") for i in range(198)]
+    burst = dict(volume__login_count=12, failure__login_failure_rate=1.0, failure__max_consecutive_failures=12)
+    return quiet + [vec("user", entity_id=f"ent-user-b{i:07d}", **burst) for i in range(2)]
+
+
+def test_gate_disables_a_rule_above_the_budget_and_keeps_the_rest(engine):
+    engine.gate(noisy_validation())
+    assert set(engine.disabled) == {"RULE-IDN-001"}
+    assert "2/200" in engine.disabled["RULE-IDN-001"]
+    row = engine.gate_report["rules"]["RULE-IDN-001"]
+    assert row == {"windows": 200, "fires": 2, "fire_rate": 0.01, "passed": False}
+    assert engine.gate_report["max_fire_rate"] == 0.005
+    assert engine.gate_report["rules"]["RULE-PRIV-001"]["passed"] is True
+    assert engine.gate_report["rules"]["RULE-APP-001"]["windows"] == 0          # ip-only rule, no ip windows
+
+
+def test_disabled_rules_stay_silent_unless_asked(engine):
+    engine.gate(noisy_validation())
+    burst = vec("user", volume__login_count=12, failure__login_failure_rate=1.0, failure__max_consecutive_failures=12)
+    assert "RULE-IDN-001" not in fired(engine, burst)
+    assert "RULE-IDN-001" in [a["rule_id"] for a in engine.evaluate(burst, include_disabled=True)]
+
+
+def test_gate_budget_can_be_widened_and_recalibration_clears_it(engine):
+    engine.gate(noisy_validation(), max_fire_rate=0.02)
+    assert engine.disabled == {}
+    engine.gate(noisy_validation())
+    assert engine.disabled
+    engine.calibrate(background())
+    assert engine.disabled == {} and engine.gate_report == {}
+
+
+def test_v100_has_no_gate_by_default():
+    engine = RuleEngine(ruleset="rules-1.0.0").calibrate(background())
+    with pytest.raises(ValueError, match="no validation gate"):
+        engine.gate(noisy_validation())
 
 
 def test_calibrated_rules_refuse_to_run_uncalibrated():
@@ -136,11 +203,11 @@ def test_rule_alerts_are_valid_envelopes_with_evidence(engine):
     assert {a["rule_id"] for a in alerts} == {"RULE-PRIV-001", "RULE-PRIV-003"}
     for alert in alerts:
         assert validate_alert(alert) == []
-        assert alert["detector"] == "rules" and alert["detector_version"] == "rules-1.0.0"
+        assert alert["detector"] == "rules" and alert["detector_version"] == "rules-1.1.0"
         assert alert["score"] == 1.0 and alert["confidence"] is None
         assert alert["event_ids"] == ["e1", "e2"] and alert["observed_at"] == "2026-10-05T10:05:00Z"
     burst = next(a for a in alerts if a["rule_id"] == "RULE-PRIV-001")
-    assert burst["evidence"] == [{"feature": "privilege.privileged_ops", "value": 40, "op": ">=", "threshold": 19.0}]
+    assert burst["evidence"] == [{"feature": "privilege.privileged_ops", "value": 40, "op": ">", "threshold": 23.75}]
     assert "privilege.privileged_ops=40" in burst["description"]
 
 
@@ -152,9 +219,15 @@ def test_alert_ids_are_deterministic_and_distinct(engine):
 
 
 def test_engine_round_trips_and_refuses_a_different_feature_set(engine):
+    engine.gate(noisy_validation())
     restored = RuleEngine.from_dict(engine.to_dict())
     window = vec("host", privilege__privileged_ops=40)
     assert restored.evaluate(window) == engine.evaluate(window)
+    assert (restored.ruleset, restored.threshold_ops, restored.disabled) == (engine.ruleset, engine.threshold_ops,
+                                                                            engine.disabled)
+    tie = vec("host", privilege__privileged_ops=19)
+    old = RuleEngine(ruleset="rules-1.0.0").calibrate(background())
+    assert RuleEngine.from_dict(old.to_dict()).evaluate(tie) == old.evaluate(tie) != []
     stale = engine.to_dict()
     stale["feature_set_version"] = "fs-1.0.0"
     with pytest.raises(ValueError, match="recalibrate"):
