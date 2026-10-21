@@ -637,6 +637,40 @@ New: rolling history, the login-history gate (both sides of the limit, failed lo
 
 ---
 
+## Phase 3e — Held-out evaluation of the frozen detectors (6 unseen scenarios, scored once)
+**Date:** Oct 21, 2026 · **Status:** DONE · frozen design = commit `18778e5` (fs-1.2.0, rules-1.2.0, iforest-1.1.0), committed before any held-out scenario was scored
+
+### Results (as-is; the clean variant gives the same rule numbers)
+| Decision | Scenarios | Intrusions detected | Incident windows | False alarms / day | Entry | Discovery* | Web attack | Privilege | Exfiltration windows | Median first alert |
+| :--- | :--- | ---: | ---: | ---: | :--- | :--- | :--- | :--- | ---: | ---: |
+| **rules-1.2.0, any rule** | **held-out (6)** | **6 / 6** | **45 / 68 (66 %)** | **0.38** | **6 / 6** | 5 / 6 | **6 / 6** | **6 / 6** | **111 / 112** | **5 min** |
+| rules-1.2.0, high severity | held-out | 6 / 6 | 24 / 68 | **0.00** | 6 / 6 | 0 / 6 | 0 / 6 | 6 / 6 | 111 / 112 | 5 min |
+| rules-1.1.0, any rule | held-out | 6 / 6 | 29 / 68 | 0.38 | 6 / 6 | 5 / 6 | 6 / 6 | **1 / 6** | **0 / 112** | 5 min |
+| Isolation Forest ≥ 0.999 | held-out | 4 / 6 | 13 / 68 | 1.12 | 0 / 6 | 3 / 6 | 4 / 6 | 1 / 6 | 0 / 112 | 7.5 min |
+| rules-1.2.0, any rule | development (2) | 2 / 2 | 14 / 24 (58 %) | 0.33 | 2 / 2 | 2 / 2 | 2 / 2 | 2 / 2 | 167 / 167 | 5 min |
+
+\* Discovery credited through windows shared with the web scan, as on the development scenarios.
+
+| Held-out scenario | Incident windows | False alarms | Exfiltration | Persistent finding at the gate | IF ROC-AUC (IP windows) |
+| :--- | ---: | ---: | :--- | :--- | ---: |
+| harrison | 11 / 17 | 0 | 111 / 112 | RULE-NET-002 (exfiltration already running in validation) | 0.888 |
+| santos | 5 / 9 | 0 | – | RULE-NET-002 | 0.875 |
+| shaw | 5 / 8 | 0 | – | – | 0.930 |
+| wardbeck | 5 / 8 | 1 | – | – | 0.915 |
+| wheeler | 10 / 13 | 0 | – | RULE-NET-002 | 0.922 |
+| wilson | 9 / 13 | 2 | – | RULE-NET-002 | 0.951 |
+
+### What the numbers mean
+1. **The changes generalise.** Held-out window recall (66 %) is no lower than development (58 %); every held-out intrusion is caught within 5 minutes of the VPN login, through the stolen-credential rule on the user window.
+2. **The two stages that attribution needs most — where it entered and what it reached — are now caught in every scenario** (entry 6 / 6, privilege 6 / 6; rules-1.1.0 caught the privilege step once).
+3. **The persistent-finding gate earned its place on unseen data:** in 4 of 6 held-out scenarios the exfiltration was already running during validation; the 1.1.0 gate would have turned the tunnelling rule off, 1.2.0 kept it and caught 111 of 112 exfiltration windows in `harrison`.
+4. **False alarms:** 3 in 8 test days, all RULE-APP-001 (low severity, "web error burst") on benign clients with 29–50 requests. High-severity rules alone: 0 false alarms, still all 6 entries and all 6 privilege steps.
+5. **Still missed (23 windows):** 7 IP windows of the attacker's external VPN address (its user window is caught), 8 DNS-discovery windows on the shared VPN address, 7 small web windows, 1 privilege user window. Discovery has no dedicated detection — a burst-rate DNS feature is the open item.
+6. **Isolation Forest alone is weak at a fixed threshold** (saturation) but ranks the IP windows well (ROC 0.87–0.95 on held-out) — fusion input only.
+7. **Limits:** one attack template (8 runs of the same intrusion family); generalisation is to new companies, users, dates and noise, not to new attack types. Results: `data/evaluation/phase3_ait_corpus_{asis,clean}.json` (script `scripts/summarize_ait.py`, tests `test_phase3_ait_corpus.py`).
+
+---
+
 ## Phase 4 — Fusion, calibration, alert-fatigue controls (design; final evaluation pending)
 **Date:** Oct 21, 2026 · **Status:** design frozen on the development scenarios; leave-one-scenario-out over all 8 next
 
@@ -669,7 +703,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. **Held-out evaluation** of the frozen detectors (fs-1.2.0, rules-1.2.0, iforest-1.1.0) on the 6 held-out scenarios, once.
+1. ~~Held-out evaluation~~ done (Phase 3e).
 2. **Phase 4 final:** fusion leave-one-scenario-out over all 8 (design frozen), calibration artefact, alerts per day before / after.
 3. **Phase 5 correlation** using the asset inventories (address → host, FQDN → host) to link the VPN login, the web / DNS activity and the privilege steps into one incident; **Phase 6 attribution** (entry point, path, reach).
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
