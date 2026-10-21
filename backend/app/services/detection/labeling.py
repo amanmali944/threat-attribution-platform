@@ -19,12 +19,21 @@ which comes from the dataset's own documentation (see the spec file's provenance
 
 Splits are time-ordered, half-open intervals aligned to the window size, so no window can
 straddle a boundary, and the incident must lie wholly in the test split.
+
+Event-label datasets (AIT-LDS)
+    When the dataset ships per-event ground truth, the spec lists ``label_classes`` (class ->
+    label names, in precedence order, ``incident`` first) and ``ignored_labels``. An event's
+    class is the first class whose names it carries; the notable/routine heuristic is not used.
+    Classes other than ``incident`` (e.g. ``exfiltration``) may overlap the training splits -
+    that is a property of the data, recorded in the spec's provenance, not leakage of the
+    incident under test.
 """
 from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
@@ -60,8 +69,14 @@ class DatasetSpec:
     window_seconds: int
     incident: Interval
     splits: Dict[str, Interval]
-    routine_command_min_hours: int
+    routine_command_min_hours: Optional[int]
     provenance: Mapping[str, Any]
+    label_classes: Mapping[str, FrozenSet[str]] = field(default_factory=dict)
+    ignored_labels: FrozenSet[str] = frozenset()
+
+    @property
+    def uses_event_labels(self) -> bool:
+        return bool(self.label_classes)
 
 
 def load_spec(path: str) -> DatasetSpec:
@@ -93,13 +108,37 @@ def load_spec(path: str) -> DatasetSpec:
     if not (splits["test"].start_us <= incident.start_us and incident.end_us <= splits["test"].end_us):
         raise ValueError("incident must lie wholly inside the test split")
 
+    label_classes: Dict[str, FrozenSet[str]] = {}
+    for name, labels in raw.get("label_classes", {}).items():
+        names = frozenset(labels)
+        if not names:
+            raise ValueError(f"label class {name} lists no labels")
+        for other, other_names in label_classes.items():
+            if names & other_names:
+                raise ValueError(f"label classes {other} and {name} share labels: {sorted(names & other_names)}")
+        label_classes[name] = names
+    ignored = frozenset(raw.get("ignored_labels", []))
+    if label_classes:
+        if next(iter(label_classes)) != "incident":
+            raise ValueError("label_classes must start with 'incident' (it has the highest precedence)")
+        if "unknown" in label_classes or "background" in label_classes:
+            raise ValueError("'unknown' and 'background' are window labels, not label classes")
+        mapped = frozenset().union(*label_classes.values())
+        if ignored & mapped:
+            raise ValueError(f"labels both ignored and mapped: {sorted(ignored & mapped)}")
+    elif "routine_command_min_hours" not in raw:
+        raise ValueError("spec needs routine_command_min_hours or label_classes")
+
+    min_hours = raw.get("routine_command_min_hours")
     return DatasetSpec(
         dataset=raw["dataset"],
         window_seconds=int(raw["window_seconds"]),
         incident=incident,
         splits=splits,
-        routine_command_min_hours=int(raw["routine_command_min_hours"]),
+        routine_command_min_hours=int(min_hours) if min_hours is not None else None,
         provenance=raw.get("provenance", {}),
+        label_classes=label_classes,
+        ignored_labels=ignored,
     )
 
 
@@ -153,17 +192,43 @@ def classify_events(
     return classes
 
 
-def label_windows(vectors: Sequence[Mapping[str, Any]], event_class: Mapping[str, str]) -> List[str]:
-    """One label per feature vector: ``incident`` > ``unknown`` > ``background``."""
+def classify_by_event_labels(
+    events: Iterable[EnrichedEvent], event_labels: Mapping[str, Sequence[str]], spec: DatasetSpec
+) -> Tuple[Dict[str, str], Counter]:
+    """event_id -> class from per-event ground truth; also returns labels mapped to no class.
+
+    Labels in ``spec.ignored_labels`` are dropped. Any other label that maps to no class is
+    counted and returned so the caller can refuse to continue - an unmapped label is a spec
+    error, not something to skip silently.
+    """
+    if not spec.uses_event_labels:
+        raise ValueError("spec has no label_classes")
+    classes: Dict[str, str] = {}
+    unmapped: Counter = Counter()
+    mapped = frozenset().union(*spec.label_classes.values())
+    for event in events:
+        names = set(event_labels.get(event.event_id, ())) - spec.ignored_labels
+        if not names:
+            continue
+        for cls, members in spec.label_classes.items():  # precedence order
+            if names & members:
+                classes[event.event_id] = cls
+                break
+        for name in names - mapped:
+            unmapped[name] += 1
+    return classes, unmapped
+
+
+def label_windows(
+    vectors: Sequence[Mapping[str, Any]],
+    event_class: Mapping[str, str],
+    precedence: Sequence[str] = ("incident", "unknown"),
+) -> List[str]:
+    """One label per feature vector: the first class in ``precedence`` it contains, else ``background``."""
     labels = []
     for vector in vectors:
         seen = {event_class.get(event_id) for event_id in vector["event_ids"]}
-        if "incident" in seen:
-            labels.append("incident")
-        elif "unknown" in seen:
-            labels.append("unknown")
-        else:
-            labels.append("background")
+        labels.append(next((cls for cls in precedence if cls in seen), "background"))
     return labels
 
 

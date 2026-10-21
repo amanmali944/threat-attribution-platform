@@ -10,8 +10,8 @@ Newest phase at the bottom. Plan: `docs/DETECTION_PLAN.md`. Contract: `docs/DETE
 
 ```
 cd backend
-python -m pytest tests/detection -q          # Developer A tests (138)
-python -m pytest tests -q                    # whole backend suite (197)
+python -m pytest tests/detection -q          # Developer A tests (151)
+python -m pytest tests -q                    # whole backend suite (210)
 
 # Real-data conversion (needs the dataset downloaded into data/external/, see Phase 1):
 python -I scripts/adapters/web_server_logs.py <organization dir> <output dir> --tenant org-x
@@ -19,6 +19,8 @@ python -I scripts/adapters/syslog_auth.py <organization-y dir> <output dir> --te
 python -I scripts/build_org_y_windows.py <derived auth dir> data/specs/org_y_incident.json <windows dir>
 python -I scripts/evaluate_org_y.py <windows dir> data/specs/org_y_incident.json data/evaluation/phase3_org_y.json --model-dir <models dir>
 python -I scripts/convert_ait_scenario.py data/external/ait/russellmitchell data/external/ait/derived/russellmitchell --scenario russellmitchell --year 2022
+python -I scripts/build_ait_windows.py data/external/ait/derived/russellmitchell data/specs/ait_russellmitchell.json data/external/ait/windows/russellmitchell-asis
+python -I scripts/build_ait_windows.py data/external/ait/derived/russellmitchell data/specs/ait_russellmitchell.json data/external/ait/windows/russellmitchell-clean --clean-baseline
 ```
 
 ---
@@ -235,9 +237,64 @@ The labelled counts were checked against an **independent recount from AIT's own
 4. **Cross-layer gap for attribution:** the VPN gives the intruder 10.9.0.10, but web and DNS logs see the attacker as 172.19.131.174 (translated at the firewall). Linking the VPN identity to the later activity needs NAT or firewall connection logs, which are not in this slice.
 5. Only ~500 benign web requests in four days: the web layer is small, so its baselines will be thin.
 
+### 1b (AIT) — Window labels and time-ordered splits for `russellmitchell`
+**Date:** Oct 21, 2026 · **Status:** DONE
+
+**Why the method differs from Org Y:** Org Y had no label for the compromise itself, so incident events were inferred ("notable" event inside the documented interval). AIT ships per-event ground truth, so labels now come **straight from the dataset**. `labeling.py` gained an event-label mode; the Org Y path is unchanged.
+
+**Definitions (code: `labeling.py` → `classify_by_event_labels`, `label_windows(..., precedence)`; spec: `data/specs/ait_russellmitchell.json`, committed):**
+| Term | Definition |
+| :--- | :--- |
+| `incident` class | Any of the 16 intrusion labels: VPN foothold, DNS / network / service scans, traceroute, dirb, wpscan, attacker HTTP, webshell upload and commands, su to jhall, sudo as jhall |
+| `exfiltration` class | `dnsteal`, `dnsteal-received`, `dnsteal-dropped` (one internal host) |
+| Ignored label | `attacker` — an umbrella label that in this slice sits only on the DNSteal lines (17,693 / 17,693); the class comes from the `dnsteal*` labels |
+| Window label | `incident` > `exfiltration` > `background` (first class the window contains). No `unknown` class: AIT labels every attack line, so unlabelled means benign |
+| Incident interval | Jan 24 03:00–04:40 — labelled intrusion events run 03:01:00 → 04:38:06, widened to window boundaries |
+
+**Guards in the spec loader and the builder (the build stops if one fails):** classes must start with `incident`, must not share labels, must not be called `unknown` / `background`, and a label cannot be both ignored and mapped; **any label that maps to no class stops the build** (a typo in the spec cannot silently turn attack events into background); every incident event must fall inside the interval; classified + ignored-only events must equal the labelled-event total of all sources; every incident event must land in an incident window.
+
+**Splits:**
+| Split | Period (UTC) | Use | Windows | incident | exfiltration | background |
+| :--- | :--- | :--- | ---: | ---: | ---: | ---: |
+| baseline | Jan 21 | fit the feature baseline only (22,383 events, 22 entities) | – | – | – | – |
+| train | Jan 22 | fit unsupervised models | 1,167 | 0 | 288 | 879 |
+| validation | Jan 23 00:00–23:00 | calibrate thresholds on background | 1,129 | 0 | 276 | 853 |
+| gap | Jan 23 23:00–24:00 | excluded | 24 | 0 | 12 | 12 |
+| test | Jan 24 | evaluation | 992 | **10** | 167 | 815 |
+
+The exfiltration host has a window in every 5-minute slot (288 per day) — it never stops.
+
+**Two variants, built and kept side by side** (`data/external/ait/windows/russellmitchell-asis` and `-clean`, git-ignored):
+- **as-is:** the baseline is fitted on everything in Jan 21, exfiltration included — what a real unsupervised system would see.
+- **clean-baseline:** the 4,962 exfiltration events of Jan 21 are removed from the baseline fit using the labels (17,421 events remain). This is label-informed cleaning, **optimistic for exfiltration**, and is reported as such. Window counts are identical; only baseline-relative features differ.
+
+**Cross-check results (real data):** 25,677 labelled events = 7,984 incident + 17,693 exfiltration, 0 unmapped labels, 0 incident events outside the interval, 0 events failing resolution; 7,984 / 7,984 incident events and 12,731 / 12,731 post-baseline exfiltration events sit in a window with their label. Build time 8.4 s.
+
+**The 10 incident windows (all in test):**
+| Window (Jan 24) | Entity | Events | What it is | What stands out |
+| :--- | :--- | ---: | :--- | :--- |
+| 03:00 | VPN source IP (external) | 1 | stolen-certificate VPN login | nothing — one login from an IP with no history |
+| 03:00 | user jhall | 1 | the same login | nothing — jhall is cold-start (2 prior connections) |
+| 03:00 | shared internal address | 143 | DNS brute force mixed with normal users' queries | volume z = 4.3, burst timing |
+| 03:35 | shared internal address | 18 | end of network discovery | weak |
+| 03:55 | shared internal address | **7,719** | dirb + wpscan + webshell | volume z = 269, 99% HTTP errors, endpoint entropy 12.8 bits |
+| 03:55 | intranet server address | 93 | DNS lookups made by the webshell commands | volume z = 2.6 |
+| 03:55 | another internal client | 13 | a few labelled DNS / web lines | weak |
+| 04:35 | host intranet-server | 3 | su + 2 sudo | 3 privileged operations; host has no history at all |
+| 04:35 | user jhall | 2 | sudo as jhall | 2 privileged operations |
+| 04:35 | web-server account | 1 | su to jhall | 1 privileged operation |
+
+**Correction to 1d, point 4 (found while inspecting the windows):** `172.19.131.174` is **not an attacker-only address**. It produces ~2,600–2,900 DNS queries and 300–500 web requests on *every* day, and jhall's legitimate SSH logins on Jan 21 and 23 come from it — it is the firewall's NAT address for the internal user network. Consequences: (a) attack windows on that IP are mixed with normal traffic, so only loud steps (the 7,719-event scan) stand out; (b) for attribution, "the attacker's IP" is a shared address — the causal chain has to be carried by the VPN session, user and host, not by the IP.
+
+**Tests (`test_labeling.py`, +13 → 29 passed):** event-label spec loads without the routine-hours field; a heuristic spec without it is rejected; five bad-class specs rejected (wrong order, shared labels, reserved names, empty class, ignored-and-mapped); precedence (incident beats exfiltration), ignored-only events unlabelled, **unmapped labels surfaced**; custom window-label precedence; the committed AIT spec is valid; and a real-data check over both variants (incident windows only in test and inside the interval, every window in its split, labels never in features, counts equal the report, full label coverage). **Mutation check: 4 / 4 caught** (precedence ignored, unmapped labels dropped, class overlap accepted, window precedence reversed). Detection suite: **151 passed**.
+
+**What this means for the evaluation (next):**
+1. **10 positive windows is small.** Every recall figure moves in 10% steps; it is still one incident (n = 1).
+2. **Expected easy:** the web scan (03:55) — any volume or error-rate detector will see it. **Expected hard:** the VPN login (cold start, 1 event), the DNS steps hidden in a shared NAT address, and the host privilege step (host has no history — the Isolation Forest has no host model). Rules on privileged operations are the only real chance for 04:35.
+3. **Exfiltration is evaluated separately** on the 167 test exfiltration windows, both variants. fs-1.1.0 has no DNS-specific features (query length, label entropy) — the payload already carries them, so if exfiltration is missed, that is the reason to add them (fs-1.2.0), decided on validation, not test.
+
 ### Next in Phase 1
-- **1b for AIT:** spec + window labels (intrusion incident Jan 24 03:00–04:40; exfiltration as a separate class, both variants above), time-ordered splits with Jan 21–23 as baseline / train / validation.
-- Then: rules-1.1.0 + Isolation Forest evaluated on AIT (the first unseen test), and the same slice from more AIT scenarios for anything supervised.
+- The same slice from more AIT scenarios, for anything supervised (fusion needs more than one incident).
 
 ---
 
@@ -404,7 +461,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 
 ## Next
 
-1. **AIT labels and splits** (incident + separate exfiltration class) — conversion is done (Phase 1d).
-2. **rules-1.1.0** (strict calibrated thresholds + validation gate), judged on AIT.
+1. **rules-1.1.0** (strict calibrated thresholds + validation gate) and the Isolation Forest, evaluated on AIT — labels and splits are done (Phase 1b AIT).
+2. More AIT scenarios (same slice) for supervised fusion.
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).

@@ -6,6 +6,7 @@ import pytest
 from app.services.detection.features import FEATURE_NAMES, FeatureConfig, compute_features
 from app.services.detection.labeling import (
     Interval,
+    classify_by_event_labels,
     classify_events,
     label_windows,
     load_event_labels,
@@ -165,6 +166,71 @@ def test_end_to_end_labels_follow_entities(tmp_path):
     assert labels[(entity_id("user", TENANT, "ops"), w(1.5 * H))] == "unknown"
 
 
+# ------------------------------------------------------------------ event-label datasets (AIT)
+
+LABEL_CLASSES = {"incident": ["foothold", "escalate"], "exfiltration": ["dnsteal"]}
+
+
+def event_label_spec(tmp_path, **changes):
+    changes.setdefault("label_classes", LABEL_CLASSES)
+    changes.setdefault("ignored_labels", ["attacker"])
+    path = write_spec(tmp_path, **changes)
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    raw.pop("routine_command_min_hours")
+    Path(path).write_text(json.dumps(raw), encoding="utf-8")
+    return path
+
+
+def test_event_label_spec_loads_without_routine_hours(tmp_path):
+    spec = load_spec(event_label_spec(tmp_path))
+    assert spec.uses_event_labels and spec.routine_command_min_hours is None
+    assert list(spec.label_classes) == ["incident", "exfiltration"]
+    assert spec.ignored_labels == frozenset({"attacker"})
+
+
+def test_heuristic_spec_needs_routine_hours(tmp_path):
+    path = write_spec(tmp_path)
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    raw.pop("routine_command_min_hours")
+    Path(path).write_text(json.dumps(raw), encoding="utf-8")
+    with pytest.raises(ValueError, match="routine_command_min_hours or label_classes"):
+        load_spec(path)
+
+
+@pytest.mark.parametrize("changes, message", [
+    ({"label_classes": {"exfiltration": ["dnsteal"], "incident": ["foothold"]}}, "start with 'incident'"),
+    ({"label_classes": {"incident": ["foothold"], "exfiltration": ["foothold"]}}, "share labels"),
+    ({"label_classes": {"incident": ["foothold"], "unknown": ["x"]}}, "window labels"),
+    ({"label_classes": {"incident": []}}, "lists no labels"),
+    ({"ignored_labels": ["foothold"]}, "both ignored and mapped"),
+])
+def test_event_label_spec_rejects_bad_classes(tmp_path, changes, message):
+    with pytest.raises(ValueError, match=message):
+        load_spec(event_label_spec(tmp_path, **changes))
+
+
+def test_classify_by_event_labels_precedence_ignore_and_unmapped(tmp_path):
+    spec = load_spec(event_label_spec(tmp_path))
+    events = resolved([login(eid, H + 60 * i, "u", "203.0.113.9", "SUCCESS")
+                       for i, eid in enumerate(["both", "exfil", "umbrella", "new", "plain"])])
+    sidecar = {"both": ["dnsteal", "foothold"], "exfil": ["dnsteal", "attacker"], "umbrella": ["attacker"],
+               "new": ["mystery"]}
+    classes, unmapped = classify_by_event_labels(events, sidecar, spec)
+    assert classes == {"both": "incident", "exfil": "exfiltration"}   # incident wins; ignored-only is unlabelled
+    assert unmapped == {"mystery": 1}                                   # surfaced, never silently dropped
+
+
+def test_classify_by_event_labels_needs_label_classes(tmp_path):
+    with pytest.raises(ValueError, match="no label_classes"):
+        classify_by_event_labels([], {}, load_spec(write_spec(tmp_path)))
+
+
+def test_label_precedence_custom_classes():
+    vectors = [{"event_ids": ["a", "b"]}, {"event_ids": ["b"]}, {"event_ids": ["c"]}]
+    classes = {"a": "incident", "b": "exfiltration", "c": "unknown"}
+    assert label_windows(vectors, classes, ("incident", "exfiltration")) == ["incident", "exfiltration", "background"]
+
+
 def test_load_event_labels(tmp_path):
     path = tmp_path / "labels.jsonl"
     path.write_text(
@@ -209,6 +275,46 @@ def test_org_y_windows_have_no_leakage_and_match_the_report():
                 assert record["split"] == split
                 assert split_of(record["window_start"], record["window_end"], spec) == split
                 assert sorted(record["features"]) == sorted(FEATURE_NAMES)   # labels never inside features
+                found[record["label"]] += 1
+        expected = {k: report["windows_by_split"][split].get(k, 0) for k in found}
+        assert found == expected, split
+
+
+AIT_SPEC_FILE = REPO / "data" / "specs" / "ait_russellmitchell.json"
+AIT_WINDOWS = REPO / "data" / "external" / "ait" / "windows"
+
+
+def test_committed_ait_spec_is_valid():
+    spec = load_spec(str(AIT_SPEC_FILE))
+    assert spec.uses_event_labels and list(spec.label_classes) == ["incident", "exfiltration"]
+    assert "exfiltration_overlaps_training" in spec.provenance and "seen_before_evaluation" in spec.provenance
+
+
+@pytest.mark.parametrize("variant", ["russellmitchell-asis", "russellmitchell-clean"])
+def test_ait_windows_have_no_leakage_and_match_the_report(variant):
+    folder = AIT_WINDOWS / variant
+    if not (folder / "dataset_report.json").exists():
+        pytest.skip(f"AIT windows {variant} not built")
+    spec = load_spec(str(AIT_SPEC_FILE))
+    report = json.loads((folder / "dataset_report.json").read_text(encoding="utf-8"))
+
+    assert report["variant"] == ("clean-baseline" if variant.endswith("clean") else "as-is")
+    assert (report["baseline"]["exfiltration_events_removed"] > 0) == variant.endswith("clean")
+    assert report["events_by_class_and_split"]["incident"] == {"test": report["events_by_class"]["incident"]}
+    for cls, cover in report["window_label_coverage"].items():
+        assert cover["in_a_window_with_that_label"] == cover["events_after_baseline"] > 0, cls
+
+    for split in ("train", "validation", "test"):
+        found = {"background": 0, "incident": 0, "exfiltration": 0}
+        with open(folder / f"{split}.jsonl", "rt", encoding="utf-8") as handle:
+            for line in handle:
+                record = json.loads(line)
+                assert record["split"] == split
+                assert split_of(record["window_start"], record["window_end"], spec) == split
+                assert sorted(record["features"]) == sorted(FEATURE_NAMES)
+                if record["label"] == "incident":
+                    assert split == "test"
+                    assert spec.incident.start_us <= to_us(record["window_start"]) < spec.incident.end_us
                 found[record["label"]] += 1
         expected = {k: report["windows_by_split"][split].get(k, 0) for k in found}
         assert found == expected, split
