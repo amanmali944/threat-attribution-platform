@@ -246,7 +246,7 @@ def main() -> int:
             "detector_versions": sorted({f"{w['ruleset']} / {w['iforest_version']} / {w['feature_set_version']}"
                                          for w in everything}),
             "decision_policy": "rules_first (fusion.rules_first): high rule -> alert; other rule -> at least review",
-            "evaluation": args.results,
+            "evaluation": Path(args.results).name,          # a file name, never a machine-specific path
         }
         out = Path(args.final_model)
         out.parent.mkdir(parents=True, exist_ok=True)

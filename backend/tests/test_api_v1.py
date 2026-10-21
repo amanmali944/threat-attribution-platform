@@ -342,7 +342,7 @@ def test_evaluation_summary_route(client: TestClient):
     assert "overall_recall" in data
     assert "overall_f1" in data
     assert "per_class_metrics" in data
-    assert "endpoint_execution" in data["per_class_metrics"]
+    assert data["per_class_metrics"]   # class names come from evaluation_results.json (Developer A), not the fallback
     assert "calibration" in data
     assert "brier_score" in data["calibration"]
 

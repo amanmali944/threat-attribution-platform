@@ -22,7 +22,7 @@
   "detector_versions": [
     "rules-1.2.0 / iforest-1.1.0 / fs-1.2.0"
   ],
-  "evaluation": "data/evaluation/phase4_fusion_loso_logreg.json",
+  "evaluation": "phase4_fusion_loso_logreg.json",
   "fusion_version": "fusion-1.0.0",
   "inputs": [
     "rules.high",

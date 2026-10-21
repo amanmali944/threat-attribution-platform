@@ -820,6 +820,49 @@ The intrusion is **critical in 8 / 8** and **ranked first in 7 / 8** (held-out 5
 
 ---
 
+## Phase 8 — One-command evaluation harness
+**Date:** Oct 21, 2026 · **Status:** DONE
+
+`python -I scripts/evaluate.py` runs every stage in order — per-scenario detectors (16 runs: 8 scenarios × as-is / clean, with fusion dumps), the detector summary, fusion leave-one-scenario-out (logistic regression and the challenger) with the final calibration artefact, correlation, attribution and risk — and then assembles **`data/evaluation/evaluation_results.json`** in the contract §9 shape. `--assemble-only` rebuilds the artefact from the stage outputs. Every number in it is a **held-out** number; accuracy is deliberately absent; notes live in a separate `notes` object so the numeric objects stay numeric.
+
+| Key (held-out, 6 scenarios) | Value |
+| :--- | :--- |
+| `overall_precision` / `overall_recall` / `overall_f1` (pipeline, window level) | 0.888 / 0.878 / 0.883 |
+| `per_detector_metrics`: rules / rules high / rules OR IF / fusion | P 0.981 R 0.867 · P 1.000 R 0.750 · P 0.929 R 0.872 · P 0.888 R 0.878 |
+| `calibration`: Brier / ECE / AUC-ROC (mean over folds) | 0.0021 / 0.0019 / see file |
+| `abstention_rate` | 0.0 (the review band is empty on this data, Phase 4) |
+| `alerts_per_analyst_day`: raw → after fusion → incidents | 21.1 → 6.4 → 2.0 |
+| `incident_consolidation_ratio` | 3.19 |
+| `attribution`: entry point / pre-registered / path precision / path recall / Jaccard / privileged host | 1.00 / 0.67 / 0.89 / 0.69 / 0.69 / 1.00 |
+| `detection_latency_seconds` median / p95 | 300 / 300 (5-minute window resolution) |
+
+**Reproducibility:** the full command was run from scratch (all 16 detector runs, both fusion models, correlation, attribution, risk; ~35 minutes). Every committed result file came back **identical except timestamp and timing fields** (`git diff` over phase3 / phase4 / phase5 / phase6 / phase7 and the calibration artefact). The one other difference — `calibration.json` recording an absolute local path for its source — was fixed (file name only).
+
+Tests: `test_evaluation_results.py` (4): every contract key, no accuracy field, values in range, F1 consistent with P and R, alert volume falls through the stages, figures equal the stage outputs, assembly is deterministic and equals the committed file.
+
+---
+
+## Phase 9 — Integration with the platform
+**Date:** Oct 21, 2026 · **Status:** DONE (pipeline + delivery + end-to-end test; merge into `main` is the team's call)
+
+### What was built
+- `backend/app/services/pipeline.py` — `run_pipeline(raw_events, baseline, score, assets, fusion=None, iforest=None)` chains resolve → baseline (rolled forward) → features → rules (+ fusion and Isolation Forest when trained models are given) → rules-first decisions → Fused Alerts → incidents → attribution → risk. Without a trained fusion model it runs **rules-only** (confidence by rule severity), the precise part of the evaluated system. `deliver(post, result, raw_events)` posts events, `alert`/`review` Fused Alerts, incidents linked to the platform's alert IDs, and attributions linked to the platform's incident IDs; every status is counted and a missing endpoint is reported, not fatal. Alerts carry at most 200 event IDs (the full count stays in `evidence`).
+- `backend/tests/test_e2e_pipeline.py` (5) — a three-layer intrusion after a normal day (stolen credentials on the VPN, a 40-request scan from the VPN address at the intranet vhost, `www-data` running `su`, `sudo cat /etc/shadow`) through the real pipeline and **Developer B's FastAPI app** (TestClient, in-memory database): all four stage rules fire; one incident across identity, application and endpoint; entry = the account from the attacker's address on the exact login event; reached vpn → intranet; dwell 39 m 10 s; critical risk with contributors; 43 events, 5 alerts, 1 incident and 1 attribution accepted (201) and read back with every Developer A field intact; and `GET /api/v1/evaluation/summary` serves **our measured figures, not its fallback**.
+- `docs/HANDOFF_DEVELOPER_A.md` — what Developer A delivers, the measured results, how to run, how to deliver, and the change requests below.
+
+### Found by the end-to-end test
+| Finding | Action |
+| :--- | :--- |
+| `evaluation_results.json` had text notes inside objects the platform types as numbers → the platform's `except Exception: pass` would have **silently served its hard-coded fallback metrics** | Fixed on our side (numeric objects, notes moved to `notes`); test pins it. **CR-08** to Developer B: surface the validation error instead of falling back |
+| `POST /events` matches existing entities on `identifier` only | **CR-09**: include `entity_type` |
+| `AttributionCreate.method` is accepted but not stored or returned | **CR-10**: store and return it |
+| I first thought the attributions router was not mounted (it is absent from `main.py`) | Wrong: it is mounted through `app/api/v1/incidents.py`. Caught by the test returning 201; no change request |
+| Developer B's `test_evaluation_summary_route` asserted a class name from the endpoint's hard-coded fallback (`endpoint_execution`); with the real artefact present it failed | One-line edit to that test (per-class metrics must be non-empty), flagged for Developer B's review in the hand-off |
+
+Whole backend suite: **353 passed** (+ 3 version-gated skips).
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
@@ -831,6 +874,7 @@ Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features �
 1. ~~Held-out evaluation~~ done (Phase 3e).
 2. ~~Phase 4 final~~ done.
 3. ~~Phase 5 correlation~~ and ~~Phase 6 attribution~~ done.
-4. **Phase 7 risk scoring** (contract §8: time-decayed, criticality-weighted, contributors), **Phase 8** one-command evaluation harness, **Phase 9** integration with the platform API.
+4. ~~Phases 7, 8, 9~~ done. All ten phases of the plan are complete on `predictions`.
+5. **Open items (none blocks the merge):** a burst-rate DNS feature for the discovery stage; correlation 1.1 (hub entities link only within a short horizon) and attribution 1.1.0 — both to be confirmed on data not used here; Developer B's CR-08 … CR-10; the team's merge of `predictions` into `main`.
 3. **Phase 3c — sequence model** (order of actions per entity), kept only if it catches something rules and the Isolation Forest miss.
 4. **Phase 4 — fusion, calibration and alert aggregation** (brute-force alerts per source → one; abstain band).

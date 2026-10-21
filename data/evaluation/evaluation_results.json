@@ -1,0 +1,141 @@
+{
+  "abstention_rate": 0.0,
+  "alerts_per_analyst_day": {
+    "after_fusion": 6.38,
+    "benign_only_incidents": 1.12,
+    "incidents": 2.0,
+    "raw_detector_alerts": 21.12
+  },
+  "attribution": {
+    "entry_point_accuracy": 1.0,
+    "entry_point_accuracy_pre_registered": 0.6667,
+    "path_precision": 0.8889,
+    "path_recall": 0.6945,
+    "privileged_host_reached": 1.0,
+    "reached_assets_jaccard": 0.6945
+  },
+  "calibration": {
+    "auc_roc": 0.9635,
+    "brier_score": 0.002105,
+    "expected_calibration_error": 0.0019,
+    "max_calibration_error": 0.015499999999999958,
+    "reliability_bins": [
+      {
+        "bin_lower": 0.0,
+        "bin_upper": 0.1,
+        "count": 12287,
+        "mean_confidence": 0.0022,
+        "observed_rate": 0.0019
+      },
+      {
+        "bin_lower": 0.9,
+        "bin_upper": 1.0,
+        "count": 160,
+        "mean_confidence": 0.9657,
+        "observed_rate": 0.9812
+      }
+    ],
+    "windows": 12447
+  },
+  "components": {
+    "anomaly": "iforest-1.1.0",
+    "attribution": "graph-attribution-1.1.0",
+    "calibration": "cal-1.0.0",
+    "correlation": "entity-time-graph-1.0.0",
+    "features": "fs-1.2.0",
+    "fusion": "fusion-1.0.0",
+    "rules": "rules-1.2.0"
+  },
+  "corpus": "AIT-LDS v2.0, 8 scenarios (Zenodo 10.5281/zenodo.5789064); held-out = harrison, santos, shaw, wardbeck, wheeler, wilson",
+  "corpus_seed": 42,
+  "detection_latency_seconds": {
+    "median": 300.0,
+    "p95": 300.0
+  },
+  "evaluation_timestamp": "2026-10-21T15:10:17Z",
+  "incident_consolidation_ratio": 3.188,
+  "incidents": {
+    "intrusion_in_one_incident": 6,
+    "intrusion_ranked_first_by_risk": "5/6",
+    "main_incident_share_of_intrusion_alerts": 1.0
+  },
+  "model_version": "pipeline-1.0.0",
+  "notes": {
+    "attribution": "graph-attribution-1.1.0: entry = graph root; decided AFTER the 1.0.0 entry errors on two held-out scenarios (shaw, wilson) were seen",
+    "auc_roc": "mean over the 6 held-out folds",
+    "detection_latency_seconds": "from the first incident window to the end of the first flagged window (5-minute resolution)",
+    "path_recall": "share of ground-truth hosts the attack path proves were reached",
+    "per_class_metrics": "windows; the pipeline flags hostile vs benign, it does not predict the class"
+  },
+  "overall_f1": 0.8827,
+  "overall_precision": 0.8876,
+  "overall_recall": 0.8778,
+  "per_class_metrics": {
+    "exfiltration": {
+      "f1": null,
+      "precision": null,
+      "recall": 0.9911,
+      "support": 112
+    },
+    "incident": {
+      "f1": null,
+      "precision": null,
+      "recall": 0.6912,
+      "support": 68
+    }
+  },
+  "per_detector_metrics": {
+    "fusion": {
+      "f1": 0.8827,
+      "false_alarms_per_day": 2.5,
+      "precision": 0.8876,
+      "recall": 0.8778,
+      "support": 180
+    },
+    "pipeline_rules_first": {
+      "f1": 0.8827,
+      "false_alarms_per_day": 2.5,
+      "precision": 0.8876,
+      "recall": 0.8778,
+      "support": 180
+    },
+    "rules": {
+      "f1": 0.9204,
+      "false_alarms_per_day": 0.38,
+      "precision": 0.9811,
+      "recall": 0.8667,
+      "support": 180
+    },
+    "rules_high_severity": {
+      "f1": 0.8571,
+      "false_alarms_per_day": 0.0,
+      "precision": 1.0,
+      "recall": 0.75,
+      "support": 180
+    },
+    "rules_or_isolation_forest": {
+      "f1": 0.8997,
+      "false_alarms_per_day": 1.5,
+      "precision": 0.929,
+      "recall": 0.8722,
+      "support": 180
+    }
+  },
+  "ranking_median_average_precision": {
+    "event_count": 0.1986,
+    "fusion": 0.6811,
+    "iforest": 0.1549,
+    "rules_any": 0.6261,
+    "rules_high": 0.5014
+  },
+  "schema_version": "1.0",
+  "scope": "held-out scenarios only, window level, hostile = intrusion or exfiltration; leave-one-scenario-out fusion",
+  "sources": [
+    "phase3_ait_corpus_asis.json",
+    "phase4_fusion_loso_logreg.json",
+    "phase5_correlation.json",
+    "phase6_attribution.json",
+    "phase7_risk.json",
+    "calibration.json"
+  ]
+}
