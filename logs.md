@@ -863,6 +863,16 @@ Whole backend suite: **353 passed** (+ 3 version-gated skips).
 
 ---
 
+## Documentation for the team (Oct 24, 2026)
+
+- `predictions` pushed to GitHub by the user's instruction (`0f57c4c..55dd72f`); nothing merged.
+- `guide_to_B.md` — plain-language summary for Developer B.
+- `docs/SYSTEM_OVERVIEW.md` — end-to-end system diagram (Mermaid) and every phase: plan, problems, results, tests.
+- `README.md` (repo root, new) — install, run platform, run tests per phase, reproduce the evaluation, where results live, troubleshooting.
+- Verified before writing: whole backend suite **353 passed, 3 skipped** (34 s); on a fresh clone the real-data tests skip with a reason because `data/external/` is not in git.
+
+---
+
 ## ML strategy (decision recorded Oct 21, 2026)
 
 Recorded in `docs/DETECTION_PLAN.md` §4A. Summary: baseline-relative features → Isolation Forest per subject type (trained on normal only) → n-gram sequence model → **supervised logistic-regression fusion** (gradient boosting as challenger) → isotonic calibration with an abstain band. Evaluation splits by scenario run, includes leave-one-attack-class-out and ablations, and reports PR-AUC, per-class precision/recall, ECE/Brier and alerts per analyst per day — never accuracy. All of it depends on a labelled data source (Phase 1 decision).
