@@ -13,6 +13,7 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.evaluation import router as evaluation_router
 from app.api.v1.graph import router as graph_router
 from app.api.v1.summary import router as summary_router
+from app.api.v1.demo_simulator import router as demo_router
 
 
 @asynccontextmanager
@@ -50,6 +51,7 @@ app.include_router(dashboard_router, prefix=settings.API_V1_STR)
 app.include_router(evaluation_router, prefix=settings.API_V1_STR)
 app.include_router(graph_router, prefix=settings.API_V1_STR)
 app.include_router(summary_router, prefix=settings.API_V1_STR)
+app.include_router(demo_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/health")

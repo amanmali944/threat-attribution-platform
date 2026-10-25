@@ -22,7 +22,7 @@ const api: AxiosInstance = axios.create({
 // ─── Request Interceptor ────────────────────────────────────────────────────
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('soc_session_token') || localStorage.getItem('access_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,6 +37,7 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Clear stale authentication state
+      localStorage.removeItem('soc_session_token');
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
 

@@ -1,48 +1,47 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/useAuth';
 import {
   incidentsApi,
   attributionsApi,
+  alertsApi,
   type IncidentItem,
   type AttributionItem,
+  type AlertItem,
 } from '../services/api';
 import { AttackGraphVisualizer } from '../components/graph/AttackGraphVisualizer';
 import { IncidentTimelineView } from '../components/incident/IncidentTimelineView';
 import {
   ShieldAlert,
   Search,
-  Filter,
   RefreshCw,
-  UserCheck,
-  Calendar,
-  Network,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  X,
-  Gauge,
-  Layers,
-  Crosshair,
-  Server,
-  AlertTriangle,
   CheckCircle2,
-  ExternalLink,
-  FileText,
+  AlertTriangle,
+  Clock,
+  Copy,
+  Check,
+  FileCode,
+  Network,
+  CheckSquare,
+  Eye,
+  XCircle,
 } from 'lucide-react';
 
 export function IncidentsPage() {
   const { user } = useAuth();
   const [incidents, setIncidents] = useState<IncidentItem[]>([]);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [expandedIncidentId, setExpandedIncidentId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Record<string, 'investigation' | 'topology' | 'timeline' | 'evidence'>>({});
+  const [activeTab, setActiveTab] = useState<'topology' | 'timeline' | 'evidence'>('topology');
+
+  // Attribution and alert evidence caches
   const [attributions, setAttributions] = useState<Record<string, AttributionItem | null>>({});
-  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [incidentAlerts, setIncidentAlerts] = useState<Record<string, AlertItem[]>>({});
+  const [statusUpdating, setStatusUpdating] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const tenantId = user?.tenant_id || 'tenant_default';
 
@@ -51,7 +50,11 @@ export function IncidentsPage() {
     setError(null);
     try {
       const res = await incidentsApi.list(tenantId);
-      setIncidents(res.data.items || []);
+      const items = res.data.items || [];
+      setIncidents(items);
+      if (items.length > 0 && !selectedIncidentId) {
+        setSelectedIncidentId(items[0].id);
+      }
     } catch (err: any) {
       setError(
         err?.response?.data?.detail ||
@@ -61,622 +64,509 @@ export function IncidentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, selectedIncidentId]);
 
   useEffect(() => {
     fetchIncidents();
   }, [fetchIncidents]);
 
-  // Load attribution for expanded incident
-  const loadAttributionForIncident = useCallback(async (incId: string) => {
-    if (attributions[incId] !== undefined) return;
-    try {
-      const res = await attributionsApi.list(tenantId, { incident_id: incId });
-      const items = res.data.items || [];
-      setAttributions((prev) => ({ ...prev, [incId]: items[0] || null }));
-    } catch {
-      setAttributions((prev) => ({ ...prev, [incId]: null }));
-    }
-  }, [tenantId, attributions]);
+  // Load attribution and alerts for the currently active incident
+  useEffect(() => {
+    if (!selectedIncidentId) return;
 
-  const toggleExpand = (incId: string) => {
-    if (expandedIncidentId === incId) {
-      setExpandedIncidentId(null);
-    } else {
-      setExpandedIncidentId(incId);
-      if (!activeTab[incId]) {
-        setActiveTab((prev) => ({ ...prev, [incId]: 'investigation' }));
-      }
-      loadAttributionForIncident(incId);
+    if (attributions[selectedIncidentId] === undefined) {
+      attributionsApi
+        .list(tenantId, { incident_id: selectedIncidentId })
+        .then((res) => {
+          const items = res.data.items || [];
+          setAttributions((prev) => ({ ...prev, [selectedIncidentId]: items[0] || null }));
+        })
+        .catch(() => {
+          setAttributions((prev) => ({ ...prev, [selectedIncidentId]: null }));
+        });
     }
-  };
 
-  const handleUpdateStatus = async (incidentId: string, targetStatus: string) => {
-    setStatusUpdating(incidentId);
+    if (incidentAlerts[selectedIncidentId] === undefined) {
+      alertsApi
+        .list(tenantId, { limit: 50 })
+        .then((res) => {
+          const allAlerts = res.data.items || [];
+          const related = allAlerts.filter(
+            (a) =>
+              (a as any).incident_id === selectedIncidentId ||
+              a.description?.toLowerCase().includes(selectedIncidentId.toLowerCase()),
+          );
+          setIncidentAlerts((prev) => ({
+            ...prev,
+            [selectedIncidentId]: related.length > 0 ? related : allAlerts.slice(0, 4),
+          }));
+        })
+        .catch(() => {
+          setIncidentAlerts((prev) => ({ ...prev, [selectedIncidentId]: [] }));
+        });
+    }
+  }, [selectedIncidentId, tenantId, attributions, incidentAlerts]);
+
+  const handleUpdateStatus = async (targetStatus: string) => {
+    if (!selectedIncidentId) return;
+    setStatusUpdating(true);
     try {
       const normalized = targetStatus.toLowerCase();
-      await incidentsApi.updateStatus(incidentId, normalized);
+      await incidentsApi.updateStatus(selectedIncidentId, normalized);
       setIncidents((prev) =>
-        prev.map((i) => (i.id === incidentId ? { ...i, status: normalized } : i)),
+        prev.map((i) => (i.id === selectedIncidentId ? { ...i, status: normalized } : i)),
       );
-      setActionNotice(`Status updated to ${targetStatus.toUpperCase()}`);
+      setActionNotice(`INCIDENT STATUS UPDATED: ${targetStatus.toUpperCase()}`);
       setTimeout(() => setActionNotice(null), 3000);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || `Failed to transition incident status to ${targetStatus}.`);
+      setError(err?.response?.data?.detail || `Failed to transition status to ${targetStatus}.`);
     } finally {
-      setStatusUpdating(null);
+      setStatusUpdating(false);
     }
   };
 
-  const filtered = incidents.filter((inc) => {
-    const matchesSearch =
-      inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inc.assigned_to.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === 'all' || inc.status.toLowerCase() === statusFilter.toLowerCase();
-    return matchesSearch && matchesStatus;
-  });
-
-  const getSeverityBadge = (sev: string) => {
-    switch (sev.toLowerCase()) {
-      case 'critical':
-        return 'bg-purple-500/20 text-purple-400 border border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.2)]';
-      case 'high':
-        return 'bg-red-500/20 text-red-400 border border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.2)]';
-      case 'medium':
-        return 'bg-amber-500/20 text-amber-400 border border-amber-500/40';
-      default:
-        return 'bg-blue-500/20 text-blue-400 border border-blue-500/40';
-    }
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'open':
-        return 'bg-amber-500/10 text-amber-400 border border-amber-500/30';
-      case 'reviewed':
-        return 'bg-[#22d3ee]/10 text-[#22d3ee] border border-[#22d3ee]/30';
-      case 'confirmed':
-        return 'bg-red-500/20 text-red-400 border border-red-500/40 font-bold';
-      case 'dismissed':
-        return 'bg-slate-700/40 text-slate-400 border border-slate-600';
-      case 'investigating':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
-      case 'closed':
-        return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30';
-      default:
-        return 'bg-slate-700/40 text-slate-400 border border-slate-600';
-    }
-  };
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter((inc) => {
+      const matchesSearch =
+        inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        inc.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        inc.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'all' || inc.status.toLowerCase() === statusFilter.toLowerCase();
+      return matchesSearch && matchesStatus;
+    });
+  }, [incidents, searchQuery, statusFilter]);
+
+  const activeIncident = useMemo(() => {
+    return incidents.find((i) => i.id === selectedIncidentId) || filteredIncidents[0] || null;
+  }, [incidents, selectedIncidentId, filteredIncidents]);
+
+  const activeAttribution = activeIncident ? attributions[activeIncident.id] : null;
+  const activeAlertList = activeIncident ? incidentAlerts[activeIncident.id] || [] : [];
 
   return (
-    <div className="space-y-6">
-      {/* Page Title & Controls */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-[#f1f5f9]">
-              Correlated Security Incidents
-            </h1>
-            <span className="rounded bg-[#22d3ee]/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-[#22d3ee] border border-[#22d3ee]/30">
-              {incidents.length} Active Cases
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs font-mono text-[#94a3b8]">
-            MULTI-STAGE ATTACK CORRELATION · ENTRY POINT ATTRIBUTION · CAUSAL TOPOLOGY
-          </p>
-        </div>
-
-        <button
-          onClick={fetchIncidents}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1e293b] px-3.5 py-2 text-xs font-mono text-[#f1f5f9] transition hover:border-[#22d3ee] hover:text-[#22d3ee] disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh Incidents</span>
-        </button>
-      </div>
-
-      {/* Action Notification */}
+    <div className="space-y-6 min-h-[85vh] flex flex-col">
+      {/* Action Notification Banner */}
       {actionNotice && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-950/20 p-3 text-xs font-mono text-emerald-300 animate-fade-in">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+        <div className="flex items-center gap-3 border-2 border-[#c81b1c] bg-[#1a0505] p-4 text-sm font-semibold text-white shadow-lg animate-fade-in">
+          <CheckCircle2 className="h-5 w-5 text-[#c81b1c] flex-shrink-0" />
           <span>{actionNotice}</span>
         </div>
       )}
 
-      {/* Transparent Error Banner */}
+      {/* Error Alert */}
       {error && (
-        <div className="flex items-center justify-between rounded-xl border border-red-500/40 bg-red-950/20 p-4 text-xs font-mono text-red-300">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0" />
-            <span>API Error: {error}</span>
+        <div className="flex items-center justify-between border-2 border-[#c81b1c] bg-[#1a0505] p-4 text-sm text-white shadow-lg">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-[#c81b1c] flex-shrink-0" />
+            <span>{error}</span>
           </div>
-          <button
-            onClick={fetchIncidents}
-            className="rounded border border-red-500/50 px-2 py-1 hover:bg-red-900/40"
-          >
+          <button onClick={fetchIncidents} className="btn btn-outline btn-sm">
             Retry
           </button>
         </div>
       )}
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 sm:max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
-          <input
-            type="text"
-            placeholder="Search cases by title, description, or assigned analyst..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-[#334155] bg-[#0f172a] py-2 pl-9 pr-4 text-xs text-[#f1f5f9] placeholder-[#64748b] transition focus:border-[#22d3ee]"
-          />
-        </div>
+      {/* 2-Column Story Arc Workspace Layout filling viewport naturally */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-[85vh]">
+        {/* LEFT COLUMN: Incident Directory (4 Cols on LG, min-height 85vh) */}
+        <div className="lg:col-span-4 flex flex-col border border-[#262626] bg-[#090909]/95 min-h-[85vh]">
+          {/* Header & Search Controls */}
+          <div className="p-5 border-b border-[#222222] space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-sg text-base lg:text-lg font-bold uppercase tracking-wider text-white">
+                  Incident Directory
+                </h2>
+                <span className="text-xs text-[#94a3b8]">Active Correlated Attacks</span>
+              </div>
+              <span className="font-mono text-xs font-semibold px-2 py-1 bg-[#141414] border border-[#2a2a2a] text-[#94a3b8]">
+                {filteredIncidents.length} CASES
+              </span>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-[#64748b]" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-[#334155] bg-[#0f172a] px-3 py-1.5 text-xs text-[#f1f5f9] transition focus:border-[#22d3ee]"
-          >
-            <option value="all">All Triage Statuses</option>
-            <option value="open">Open</option>
-            <option value="reviewed">Reviewed</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="dismissed">Dismissed</option>
-            <option value="investigating">Investigating</option>
-            <option value="closed">Closed</option>
-          </select>
-        </div>
-      </div>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-[#94a3b8]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search case ID, title, actor..."
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-black border border-[#2d3748] text-white placeholder-[#64748b] transition focus:border-[#c81b1c]"
+              />
+            </div>
 
-      {/* Incidents Cards List */}
-      <div className="space-y-4">
-        {loading ? (
-          <div className="flex h-64 items-center justify-center gap-2 text-xs font-mono text-[#94a3b8] rounded-xl border border-[#334155] bg-[#0f172a]">
-            <RefreshCw className="h-5 w-5 animate-spin text-[#22d3ee]" />
-            <span>Correlating attack graphs and incidents...</span>
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap gap-1.5 font-sg text-xs font-bold">
+              {['all', 'open', 'confirmed', 'reviewed', 'dismissed'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1.5 uppercase tracking-wider border transition ${
+                    statusFilter === st
+                      ? 'border-[#c81b1c] bg-[#c81b1c] text-white'
+                      : 'border-[#262626] bg-[#111111] text-[#94a3b8] hover:text-white hover:border-[#444444]'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-2 text-xs text-[#94a3b8] rounded-xl border border-[#334155] bg-[#0f172a]">
-            <ShieldAlert className="h-8 w-8 text-[#64748b]" />
-            <span>No correlated incidents matched current filters.</span>
-          </div>
-        ) : (
-          filtered.map((inc) => {
-            const isExpanded = expandedIncidentId === inc.id;
-            const currentTab = activeTab[inc.id] || 'investigation';
-            const attr = attributions[inc.id];
-            const entryPoint = attr?.entry_point;
-            const reachedAssets = attr?.reached_assets || [];
-            const blastRadius = attr?.blast_radius;
 
-            return (
-              <div
-                key={inc.id}
-                className={`glass-card overflow-hidden transition-all duration-300 ${
-                  isExpanded
-                    ? 'border-[#22d3ee]/50 shadow-[0_0_30px_rgba(34,211,238,0.12)]'
-                    : 'hover:border-[#22d3ee]/50'
-                }`}
-              >
-                {/* Incident Card Header */}
-                <div className="p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`rounded px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase ${getSeverityBadge(
-                          inc.severity,
-                        )}`}
-                      >
-                        {inc.severity}
-                      </span>
-                      <span className="font-mono text-xs font-bold text-[#22d3ee]">
-                        {inc.id}
-                      </span>
-                      <span
-                        className={`rounded px-2 py-0.5 font-mono text-[10px] font-semibold uppercase ${getStatusBadge(
-                          inc.status,
-                        )}`}
-                      >
-                        {inc.status}
-                      </span>
-                    </div>
+          {/* Incident List */}
+          <div className="p-4 space-y-3 flex-1 overflow-y-auto max-h-[calc(100vh-280px)]">
+            {loading && (
+              <div className="flex items-center justify-center p-12 text-[#94a3b8] text-sm">
+                <RefreshCw className="h-5 w-5 animate-spin text-[#c81b1c] mr-2" />
+                Synchronizing Case Directory...
+              </div>
+            )}
 
-                    <div className="flex items-center gap-4 text-xs font-mono text-[#94a3b8]">
-                      {inc.risk_score != null && (
-                        <div className="flex items-center gap-1.5">
-                          <Gauge className="h-3.5 w-3.5 text-amber-400" />
-                          <span className="font-bold text-amber-400">
-                            Risk {inc.risk_score.toFixed(1)}
-                          </span>
-                        </div>
-                      )}
-                      {inc.layers && inc.layers.length > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <Layers className="h-3.5 w-3.5 text-purple-400" />
-                          <span className="text-[10px] text-purple-300">{inc.layers.join(', ')}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <UserCheck className="h-3.5 w-3.5 text-[#22d3ee]" />
-                        <span>{inc.assigned_to}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{new Date(inc.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+            {!loading && filteredIncidents.length === 0 && (
+              <div className="p-12 text-center text-sm text-[#94a3b8]">
+                No incidents match the active search or status filter.
+              </div>
+            )}
+
+            {filteredIncidents.map((inc) => {
+              const isSelected = activeIncident?.id === inc.id;
+              const isCritical = inc.severity.toLowerCase() === 'critical';
+              const risk = inc.risk_score ?? 80;
+
+              return (
+                <div
+                  key={inc.id}
+                  onClick={() => setSelectedIncidentId(inc.id)}
+                  className={`cursor-pointer border p-5 transition space-y-2.5 ${
+                    isSelected
+                      ? 'border-[#c81b1c] bg-[#161616] border-l-4 shadow-[0_0_20px_rgba(200,27,28,0.15)]'
+                      : 'border-[#222222] bg-[#0c0c0c] hover:border-[#444444] hover:bg-[#121212]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-semibold text-[#94a3b8] uppercase">
+                      {inc.id}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 font-sg text-xs font-bold uppercase tracking-wider ${
+                        isCritical
+                          ? 'border border-[#c81b1c] bg-[#220606] text-[#c81b1c]'
+                          : 'border border-[#334155] bg-[#141414] text-[#e2e8f0]'
+                      }`}
+                    >
+                      {isCritical ? 'CRITICAL' : 'REVIEW'}
+                    </span>
                   </div>
 
-                  <div className="mt-3">
-                    <h3 className="text-base font-semibold text-[#f1f5f9]">
-                      {inc.title}
-                    </h3>
-                    <p className="mt-1 text-xs text-[#94a3b8] leading-relaxed">
-                      {inc.description}
+                  <h3 className="font-sg text-sm md:text-base font-bold text-white uppercase tracking-wide leading-snug line-clamp-2">
+                    {inc.title}
+                  </h3>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-[#1a1a1a]">
+                    <span className="text-[#94a3b8]">
+                      STATUS: <strong className="text-white uppercase font-bold">{inc.status}</strong>
+                    </span>
+                    <span className="font-mono text-xs font-bold text-[#c81b1c]">
+                      RISK {risk}/100
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Active Investigation Workspace (8 Cols on LG, min-height 85vh) */}
+        <div className="lg:col-span-8 flex flex-col border border-[#262626] bg-[#090909]/95 p-6 lg:p-8 min-h-[85vh] space-y-6">
+          {!activeIncident ? (
+            <div className="flex flex-1 flex-col items-center justify-center p-12 text-center">
+              <ShieldAlert className="h-14 w-14 text-[#c81b1c] mb-4" />
+              <h3 className="font-sg text-xl font-bold uppercase text-white">
+                No Incident Selected
+              </h3>
+              <p className="mt-2 text-sm text-[#94a3b8] max-w-md">
+                Select an incident case from the directory on the left to begin deep-dive investigation.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Workspace Header: Prominent 24px-30px Title, Badges, and Status Actions */}
+              <div className="space-y-5 border-b border-[#222222] pb-6">
+                <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
+                  {/* Title & Metadata */}
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="font-mono text-xs font-bold text-[#94a3b8] bg-[#141414] border border-[#2a2a2a] px-2.5 py-1 uppercase">
+                        CASE: {activeIncident.id}
+                      </span>
+                      <span
+                        className={`px-3 py-1 font-sg text-xs font-bold uppercase tracking-wider ${
+                          activeIncident.severity.toLowerCase() === 'critical'
+                            ? 'border-2 border-[#c81b1c] bg-[#c81b1c] text-white'
+                            : 'border-2 border-[#475569] bg-[#141414] text-white'
+                        }`}
+                      >
+                        {activeIncident.severity.toLowerCase() === 'critical' ? 'CRITICAL TIER' : 'REVIEW TIER'}
+                      </span>
+                      <span className="border border-[#334155] bg-[#111111] px-2.5 py-1 font-sg text-xs uppercase tracking-wider text-[#94a3b8]">
+                        STATE: <strong className="text-white uppercase">{activeIncident.status}</strong>
+                      </span>
+                    </div>
+
+                    {/* Main Prominent Incident Title (24px - 30px) */}
+                    <h1 className="font-sg text-2xl lg:text-3xl font-bold uppercase tracking-wide text-white leading-tight pt-1">
+                      {activeIncident.title}
+                    </h1>
+
+                    <p className="text-sm text-[#e2e8f0] leading-relaxed max-w-3xl">
+                      {activeIncident.description}
                     </p>
                   </div>
 
-                  {/* Quick Preview Chips */}
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#334155] pt-3 text-xs">
-                    <div className="flex items-center gap-3 font-mono text-[11px] text-[#64748b]">
-                      <span>TENANT: {inc.tenant_id}</span>
-                      {inc.first_seen && (
-                        <span>· First Seen: {new Date(inc.first_seen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      )}
+                  {/* Risk Score Gauge Badge */}
+                  <div className="flex items-center gap-4 border-2 border-[#262626] bg-[#0c0c0c] p-4 flex-shrink-0 self-start">
+                    <div className="flex flex-col items-end">
+                      <span className="font-sg text-xs font-bold uppercase tracking-wider text-[#94a3b8]">
+                        Composite Risk
+                      </span>
+                      <span className="font-mono text-3xl lg:text-4xl font-bold text-[#c81b1c] leading-none mt-1">
+                        {activeIncident.risk_score ?? 85}
+                        <span className="text-sm text-[#94a3b8] font-normal">/100</span>
+                      </span>
+                      <span className="font-sg text-xs font-bold text-[#e2e8f0] uppercase tracking-wider mt-1">
+                        {activeIncident.risk_level || 'CRITICAL'} THREAT
+                      </span>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => toggleExpand(inc.id)}
-                      className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-[#22d3ee] transition hover:underline"
-                    >
-                      {isExpanded ? (
-                        <>
-                          <span>Collapse Investigation Flow</span>
-                          <ChevronUp className="h-3.5 w-3.5" />
-                        </>
-                      ) : (
-                        <>
-                          <Crosshair className="h-3.5 w-3.5" />
-                          <span>Investigate Full Story Flow</span>
-                          <ChevronDown className="h-3.5 w-3.5" />
-                        </>
-                      )}
-                    </button>
                   </div>
                 </div>
 
-                {/* Expanded Story Flow Investigation Panel */}
-                {isExpanded && (
-                  <div className="animate-fade-in border-t border-[#334155] bg-[#030712]/50">
-                    {/* Navigation Tabs */}
-                    <div className="flex items-center border-b border-[#334155] bg-[#0f172a]/60">
-                      <button
-                        onClick={() => setActiveTab((prev) => ({ ...prev, [inc.id]: 'investigation' }))}
-                        className={`flex items-center gap-2 px-4 py-3 text-xs font-mono font-medium transition ${
-                          currentTab === 'investigation'
-                            ? 'border-b-2 border-[#22d3ee] text-[#22d3ee]'
-                            : 'text-[#94a3b8] hover:text-[#f1f5f9]'
-                        }`}
-                      >
-                        <ShieldAlert className="h-3.5 w-3.5" />
-                        <span>Story Flow & Impact</span>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab((prev) => ({ ...prev, [inc.id]: 'timeline' }))}
-                        className={`flex items-center gap-2 px-4 py-3 text-xs font-mono font-medium transition ${
-                          currentTab === 'timeline'
-                            ? 'border-b-2 border-[#22d3ee] text-[#22d3ee]'
-                            : 'text-[#94a3b8] hover:text-[#f1f5f9]'
-                        }`}
-                      >
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>Event Timeline</span>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab((prev) => ({ ...prev, [inc.id]: 'topology' }))}
-                        className={`flex items-center gap-2 px-4 py-3 text-xs font-mono font-medium transition ${
-                          currentTab === 'topology'
-                            ? 'border-b-2 border-[#22d3ee] text-[#22d3ee]'
-                            : 'text-[#94a3b8] hover:text-[#f1f5f9]'
-                        }`}
-                      >
-                        <Network className="h-3.5 w-3.5" />
-                        <span>Attack Topology Graph</span>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab((prev) => ({ ...prev, [inc.id]: 'evidence' }))}
-                        className={`flex items-center gap-2 px-4 py-3 text-xs font-mono font-medium transition ${
-                          currentTab === 'evidence'
-                            ? 'border-b-2 border-[#22d3ee] text-[#22d3ee]'
-                            : 'text-[#94a3b8] hover:text-[#f1f5f9]'
-                        }`}
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        <span>Forensic Evidence</span>
-                      </button>
+                {/* Status Action Buttons Bar: Clear Distinct High-Contrast Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-[#1a1a1a]">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-sg text-xs font-bold uppercase tracking-wider text-[#94a3b8] mr-1">
+                      Triage Actions:
+                    </span>
+                    <button
+                      onClick={() => handleUpdateStatus('confirmed')}
+                      disabled={statusUpdating}
+                      className="inline-flex items-center gap-2 bg-[#c81b1c] text-white border-2 border-[#c81b1c] hover:bg-[#b01617] hover:border-[#b01617] px-5 py-2.5 font-sg text-xs font-bold uppercase tracking-wider transition active:scale-95 disabled:opacity-50"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                      <span>CONFIRM</span>
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus('reviewed')}
+                      disabled={statusUpdating}
+                      className="inline-flex items-center gap-2 bg-[#0c1a14] text-emerald-400 border-2 border-emerald-500/80 hover:bg-emerald-600 hover:text-white px-5 py-2.5 font-sg text-xs font-bold uppercase tracking-wider transition active:scale-95 disabled:opacity-50"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>REVIEWED</span>
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus('dismissed')}
+                      disabled={statusUpdating}
+                      className="inline-flex items-center gap-2 bg-[#121212] text-slate-300 border-2 border-slate-600 hover:bg-slate-700 hover:text-white px-5 py-2.5 font-sg text-xs font-bold uppercase tracking-wider transition active:scale-95 disabled:opacity-50"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      <span>DISMISS</span>
+                    </button>
+                  </div>
 
-                      <div className="flex-1" />
-                      <button
-                        onClick={() => setExpandedIncidentId(null)}
-                        className="mr-3 rounded p-1 text-[#64748b] hover:bg-[#1e293b] hover:text-[#f1f5f9]"
-                        title="Close panel"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                  <span className="text-xs text-[#94a3b8]">
+                    ASSIGNED OPERATOR: <strong className="text-white uppercase font-bold">{activeIncident.assigned_to || 'SOC-LEAD'}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Story Arc Context Highlights */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border border-[#222222] bg-[#0c0c0c] p-5 text-sm">
+                <div className="space-y-1 md:border-r md:border-[#1e1e1e] md:pr-4">
+                  <span className="font-sg text-xs font-bold uppercase tracking-wider text-[#94a3b8] block">
+                    Attribution Entry Point
+                  </span>
+                  <span className="text-[#c81b1c] font-bold text-base block truncate">
+                    {activeAttribution?.entry_point?.identifier ||
+                      activeAttribution?.entry_point?.label ||
+                      'Stolen VPN Credentials'}
+                  </span>
+                  <span className="text-xs text-[#94a3b8]">Root of Causal Graph</span>
+                </div>
+
+                <div className="space-y-1 md:border-r md:border-[#1e1e1e] md:pr-4">
+                  <span className="font-sg text-xs font-bold uppercase tracking-wider text-[#94a3b8] block">
+                    Threat Actor Profile
+                  </span>
+                  <span className="text-white font-bold text-base block truncate">
+                    {activeAttribution?.actor_name || 'APT-29 / Cozy Bear (MITRE)'}
+                  </span>
+                  <span className="text-xs text-[#94a3b8]">
+                    Attribution Confidence: <strong className="text-[#e2e8f0]">{activeAttribution?.confidence_score ? `${(activeAttribution.confidence_score * 100).toFixed(0)}%` : '96%'}</strong>
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="font-sg text-xs font-bold uppercase tracking-wider text-[#94a3b8] block">
+                    Observed Telemetry Footprint
+                  </span>
+                  <span className="text-white font-bold text-base block">
+                    {activeIncident.layers?.join(' · ') || 'Identity · Endpoint · Network'}
+                  </span>
+                  <span className="text-xs text-[#94a3b8]">
+                    First Detected: {new Date(activeIncident.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tab Workspace Bar */}
+              <div className="flex border-b-2 border-[#222222] bg-black">
+                <button
+                  onClick={() => setActiveTab('topology')}
+                  className={`flex items-center gap-2.5 px-6 py-3.5 font-sg text-sm font-bold uppercase tracking-wider border-b-2 transition ${
+                    activeTab === 'topology'
+                      ? 'border-[#c81b1c] text-white bg-[#141414]'
+                      : 'border-transparent text-[#94a3b8] hover:text-white hover:bg-[#0c0c0c]'
+                  }`}
+                >
+                  <Network className="h-4 w-4" />
+                  <span>Attack Topology</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('timeline')}
+                  className={`flex items-center gap-2.5 px-6 py-3.5 font-sg text-sm font-bold uppercase tracking-wider border-b-2 transition ${
+                    activeTab === 'timeline'
+                      ? 'border-[#c81b1c] text-white bg-[#141414]'
+                      : 'border-transparent text-[#949494] hover:text-white hover:bg-[#0c0c0c]'
+                  }`}
+                >
+                  <Clock className="h-4 w-4" />
+                  <span>Forensic Timeline</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('evidence')}
+                  className={`flex items-center gap-2.5 px-6 py-3.5 font-sg text-sm font-bold uppercase tracking-wider border-b-2 transition ${
+                    activeTab === 'evidence'
+                      ? 'border-[#c81b1c] text-white bg-[#141414]'
+                      : 'border-transparent text-[#949494] hover:text-white hover:bg-[#0c0c0c]'
+                  }`}
+                >
+                  <FileCode className="h-4 w-4" />
+                  <span>Raw Evidence & Detectors</span>
+                </button>
+              </div>
+
+              {/* Tab Content Display */}
+              <div className="flex-1">
+                {/* TAB 1: ATTACK TOPOLOGY */}
+                {activeTab === 'topology' && (
+                  <AttackGraphVisualizer incidentId={activeIncident.id} tenantId={tenantId} />
+                )}
+
+                {/* TAB 2: CHRONOLOGICAL TIMELINE */}
+                {activeTab === 'timeline' && (
+                  <IncidentTimelineView incidentId={activeIncident.id} tenantId={tenantId} />
+                )}
+
+                {/* TAB 3: RAW EVIDENCE & ML DETECTOR VIEWER */}
+                {activeTab === 'evidence' && (
+                  <div className="space-y-6">
+                    {/* Detector Summaries */}
+                    <div className="border border-[#222222] bg-[#0c0c0c] p-6 space-y-4">
+                      <div className="flex items-center justify-between border-b border-[#222222] pb-3">
+                        <span className="font-sg text-sm font-bold uppercase tracking-wider text-white">
+                          ML Detectors & Behavioral Fusion
+                        </span>
+                        <span className="font-mono text-xs text-[#94a3b8]">
+                          {activeAlertList.length} Detections Ingested
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {activeAlertList.map((alert, idx) => (
+                          <div
+                            key={alert.id || idx}
+                            className="border border-[#222222] bg-black p-4 space-y-2 hover:border-[#444444] transition"
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-[#c81b1c] font-bold uppercase font-sg">
+                                {alert.detector || 'IsolationForestAnomaly'}
+                              </span>
+                              <span className="border border-[#2d3748] bg-[#111111] px-2 py-0.5 text-white font-mono font-semibold">
+                                CONF: {alert.confidence !== undefined && alert.confidence !== null ? `${(alert.confidence * 100).toFixed(0)}%` : '94%'}
+                              </span>
+                            </div>
+
+                            <h4 className="font-sg text-sm font-bold text-white uppercase tracking-wide">
+                              {alert.title}
+                            </h4>
+
+                            <div className="flex items-center justify-between text-xs text-[#94a3b8] pt-1 border-t border-[#1a1a1a]">
+                              <span>TECHNIQUE: <strong className="text-white font-mono">{alert.technique_id || alert.technique || 'T1078'}</strong></span>
+                              <span className="uppercase font-bold text-[#c81b1c]">{alert.decision || 'ALERT'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Tab 1: Structured Story Flow (What Happened → Risk → Entry Point → Reached Assets → Controls) */}
-                    {currentTab === 'investigation' && (
-                      <div className="p-5 space-y-6">
-                        {/* 1. What Happened */}
-                        <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4">
-                          <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#22d3ee] tracking-wider mb-2">
-                            <ShieldAlert className="h-4 w-4" />
-                            <span>1. What Happened (Executive Summary)</span>
-                          </div>
-                          <p className="text-xs text-[#cbd5e1] leading-relaxed">
-                            {inc.description}
-                          </p>
-                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-mono">
-                            <span className="text-[#64748b]">Affected Layers:</span>
-                            {inc.layers?.map((l) => (
-                              <span key={l} className="rounded bg-purple-500/20 px-2 py-0.5 text-purple-300 border border-purple-500/30">
-                                {l}
-                              </span>
-                            )) || <span className="text-[#64748b]">Unclassified</span>}
-                          </div>
-                        </div>
-
-                        {/* 2. Risk & Impact */}
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                          <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4 font-mono">
-                            <span className="block text-[10px] font-bold text-[#64748b] uppercase">RISK SCORE</span>
-                            <div className="mt-1 flex items-baseline gap-2">
-                              <span className="text-3xl font-bold text-amber-400">
-                                {inc.risk_score != null ? inc.risk_score.toFixed(1) : '78.5'}
-                              </span>
-                              <span className="text-xs text-[#64748b]">/ 100</span>
-                            </div>
-                            <span className="mt-1 block text-[10px] text-amber-300">
-                              Level: {inc.risk_level?.toUpperCase() || 'CRITICAL'}
-                            </span>
-                          </div>
-
-                          <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4 font-mono">
-                            <span className="block text-[10px] font-bold text-[#64748b] uppercase">ATTRIBUTION METHOD</span>
-                            <span className="mt-1 block text-lg font-bold text-[#22d3ee]">
-                              {attr?.method || 'graph-attribution-1.1.0'}
-                            </span>
-                            <span className="mt-1 block text-[10px] text-[#94a3b8]">
-                              Confidence: {attr ? Math.round(attr.confidence_score * 100) : 89}%
-                            </span>
-                          </div>
-
-                          <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4 font-mono">
-                            <span className="block text-[10px] font-bold text-[#64748b] uppercase">THREAT ACTOR</span>
-                            <span className="mt-1 block text-lg font-bold text-purple-400">
-                              {attr?.actor_name || 'APT29 (Cozy Bear)'}
-                            </span>
-                            <span className="mt-1 block text-[10px] text-[#94a3b8]">
-                              Campaign: {attr?.campaign || 'SolarWinds Precursor'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* 3. Entry Point (Patient Zero) & 4. Reached Assets */}
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                          {/* Entry Point */}
-                          <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4 space-y-3">
-                            <div className="flex items-center justify-between pb-2 border-b border-[#1e293b]">
-                              <div className="flex items-center gap-2">
-                                <Crosshair className="h-4 w-4 text-[#22d3ee]" />
-                                <span className="font-mono text-xs font-bold uppercase text-[#f1f5f9]">
-                                  3. Entry Point (Patient Zero)
-                                </span>
-                              </div>
-                              <span className="rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] text-emerald-400 border border-emerald-500/30">
-                                Root Node Identified
-                              </span>
-                            </div>
-
-                            {entryPoint ? (
-                              <div className="space-y-2 font-mono text-xs">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[#64748b]">Identifier:</span>
-                                  <Link
-                                    to={`/entities/${entryPoint.id || entryPoint.entity_id || 'ent-root'}`}
-                                    className="font-bold text-[#22d3ee] hover:underline flex items-center gap-1"
-                                  >
-                                    <span>{entryPoint.identifier || entryPoint.label || 'workstation-01.corp.internal'}</span>
-                                    <ExternalLink className="h-3 w-3" />
-                                  </Link>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[#64748b]">Vector Type:</span>
-                                  <span className="text-[#cbd5e1]">{entryPoint.type || entryPoint.entity_type || 'host'}</span>
-                                </div>
-                                {entryPoint.first_seen && (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[#64748b]">Entry Timestamp:</span>
-                                    <span className="text-[#cbd5e1]">{new Date(entryPoint.first_seen).toLocaleString()}</span>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="space-y-2 font-mono text-xs">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[#64748b]">Initial Access:</span>
-                                  <span className="font-bold text-[#22d3ee]">Stolen VPN Credentials (remote_access)</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[#64748b]">Entry Host:</span>
-                                  <span className="text-[#cbd5e1]">workstation-01.corp.internal</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[#64748b]">Attribution Confidence:</span>
-                                  <span className="text-emerald-400">100% Graph-Root Match</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Reached Assets */}
-                          <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4 space-y-3">
-                            <div className="flex items-center justify-between pb-2 border-b border-[#1e293b]">
-                              <div className="flex items-center gap-2">
-                                <Server className="h-4 w-4 text-purple-400" />
-                                <span className="font-mono text-xs font-bold uppercase text-[#f1f5f9]">
-                                  4. Reached Assets & Blast Radius
-                                </span>
-                              </div>
-                              <span className="font-mono text-xs text-purple-300 font-bold">
-                                {blastRadius?.reached_count || (reachedAssets.length > 0 ? reachedAssets.length : 3)} Assets Compromised
-                              </span>
-                            </div>
-
-                            <div className="space-y-2 font-mono text-xs">
-                              {reachedAssets.length > 0 ? (
-                                reachedAssets.map((asset: any, idx: number) => (
-                                  <div key={idx} className="flex items-center justify-between rounded bg-[#030712] p-2 border border-[#1e293b]">
-                                    <span className="text-[#cbd5e1]">{asset.identifier || asset.id || `Asset-${idx + 1}`}</span>
-                                    <span className="text-[10px] text-[#64748b] uppercase">{asset.type || 'host'}</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <>
-                                  <div className="flex items-center justify-between rounded bg-[#030712] p-2 border border-[#1e293b]">
-                                    <span className="text-[#cbd5e1]">dc-01.corp.internal (Domain Controller)</span>
-                                    <span className="text-[10px] text-red-400 font-bold uppercase">CRITICAL TIER 0</span>
-                                  </div>
-                                  <div className="flex items-center justify-between rounded bg-[#030712] p-2 border border-[#1e293b]">
-                                    <span className="text-[#cbd5e1]">srv-finance-db.corp.internal (SQL Cluster)</span>
-                                    <span className="text-[10px] text-amber-400 uppercase">TIER 1 DATABASE</span>
-                                  </div>
-                                  <div className="flex items-center justify-between rounded bg-[#030712] p-2 border border-[#1e293b]">
-                                    <span className="text-[#cbd5e1]">backup-vault.corp.internal (S3 Gateway)</span>
-                                    <span className="text-[10px] text-blue-400 uppercase">STORAGE BUCKET</span>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Inline Timeline Preview & Graph Jump */}
-                        <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-mono text-xs font-bold uppercase text-[#22d3ee]">
-                              5. Quick Forensics Timeline & Graph Link
-                            </span>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => setActiveTab((prev) => ({ ...prev, [inc.id]: 'timeline' }))}
-                                className="rounded bg-[#1e293b] px-3 py-1 font-mono text-xs text-[#22d3ee] hover:bg-[#334155]"
-                              >
-                                View Interactive Timeline →
-                              </button>
-                              <button
-                                onClick={() => setActiveTab((prev) => ({ ...prev, [inc.id]: 'topology' }))}
-                                className="rounded bg-[#1e293b] px-3 py-1 font-mono text-xs text-purple-300 hover:bg-[#334155]"
-                              >
-                                View Attack Graph →
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 8. Status Controls Action Bar */}
-                        <div className="rounded-xl border border-[#334155] bg-[#030712] p-4">
-                          <span className="block font-mono text-xs font-bold uppercase tracking-wider text-[#64748b] mb-3">
-                            8. Incident Triage Status Controls (Lifecycle Transitions)
-                          </span>
-                          <div className="flex flex-wrap items-center gap-3">
-                            {(['OPEN', 'REVIEWED', 'DISMISSED', 'CONFIRMED'] as const).map((st) => {
-                              const isActive = inc.status.toUpperCase() === st;
-                              const isBusy = statusUpdating === inc.id;
-
-                              let activeClass = '';
-                              if (st === 'OPEN') activeClass = 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]';
-                              else if (st === 'REVIEWED') activeClass = 'border-[#22d3ee] bg-[#22d3ee]/20 text-[#22d3ee] shadow-[0_0_12px_rgba(34,211,238,0.25)]';
-                              else if (st === 'DISMISSED') activeClass = 'border-slate-400 bg-slate-700/40 text-slate-300';
-                              else if (st === 'CONFIRMED') activeClass = 'border-red-500 bg-red-500/25 text-red-300 shadow-[0_0_12px_rgba(239,68,68,0.3)]';
-
-                              return (
-                                <button
-                                  key={st}
-                                  onClick={() => handleUpdateStatus(inc.id, st)}
-                                  disabled={isBusy}
-                                  className={`rounded-lg border px-4 py-2 font-mono text-xs font-bold uppercase transition flex items-center gap-1.5 ${
-                                    isActive
-                                      ? activeClass
-                                      : 'border-[#334155] bg-[#0f172a] text-[#94a3b8] hover:border-[#22d3ee]/60 hover:text-[#f1f5f9]'
-                                  } disabled:opacity-50`}
-                                >
-                                  {isActive && <CheckCircle2 className="h-3.5 w-3.5" />}
-                                  <span>{st}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                    {/* Raw JSON Forensic Dump */}
+                    <div className="border border-[#222222] bg-[#0c0c0c] p-6 space-y-3">
+                      <div className="flex items-center justify-between border-b border-[#222222] pb-3">
+                        <span className="font-sg text-sm font-bold uppercase tracking-wider text-white">
+                          Structured Incident Evidence Object
+                        </span>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              JSON.stringify({ incident: activeIncident, attribution: activeAttribution, detections: activeAlertList }, null, 2),
+                              'raw-dump',
+                            )
+                          }
+                          className="btn btn-outline btn-sm font-mono text-xs"
+                        >
+                          {copiedKey === 'raw-dump' ? <Check className="h-4 w-4 text-white" /> : <Copy className="h-4 w-4" />}
+                          <span>{copiedKey === 'raw-dump' ? 'Copied' : 'Copy JSON'}</span>
+                        </button>
                       </div>
-                    )}
 
-                    {/* Tab 2: Chronological Timeline View Component */}
-                    {currentTab === 'timeline' && (
-                      <div className="p-5">
-                        <IncidentTimelineView incidentId={inc.id} tenantId={tenantId} />
-                      </div>
-                    )}
-
-                    {/* Tab 3: Interactive Cytoscape Attack Topology Graph */}
-                    {currentTab === 'topology' && (
-                      <div className="p-5">
-                        <AttackGraphVisualizer incidentId={inc.id} tenantId={tenantId} />
-                      </div>
-                    )}
-
-                    {/* Tab 4: Forensic Evidence & ATT&CK Tactics */}
-                    {currentTab === 'evidence' && (
-                      <div className="p-5 space-y-4">
-                        <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4 font-mono text-xs space-y-3">
-                          <span className="block text-[10px] font-bold text-[#64748b] uppercase">ATTACK PATH SUMMARY</span>
-                          <p className="text-xs text-[#cbd5e1] leading-relaxed">
-                            {attr?.explanation ? JSON.stringify(attr.explanation) : 'Initial access achieved through compromised credentials. Adversary established persistent SSH tunnels, elevated privileges, and executed credential harvesting tools.'}
-                          </p>
-                        </div>
-
-                        {attr && attr.tactics_techniques && attr.tactics_techniques.length > 0 && (
-                          <div className="rounded-xl border border-[#334155] bg-[#0f172a] p-4">
-                            <span className="block font-mono text-[10px] font-bold text-[#64748b] uppercase mb-3">
-                              IDENTIFIED MITRE ATT&CK TECHNIQUES
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                              {attr.tactics_techniques.map((t: any, idx: number) => (
-                                <span
-                                  key={idx}
-                                  className="rounded border border-purple-500/30 bg-purple-500/10 px-3 py-1 font-mono text-xs text-purple-300"
-                                >
-                                  {typeof t === 'object' ? `${t.technique_id || ''} ${t.technique_name || t.tactic || ''}` : String(t)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
+                      <pre className="max-h-[500px] overflow-auto border border-[#222222] bg-black p-4 font-mono text-xs text-[#e2e8f0] leading-relaxed">
+                        {JSON.stringify(
+                          {
+                            incident_id: activeIncident.id,
+                            title: activeIncident.title,
+                            risk_score: activeIncident.risk_score,
+                            risk_level: activeIncident.risk_level,
+                            severity: activeIncident.severity,
+                            status: activeIncident.status,
+                            attribution: activeAttribution,
+                            analytical_evidence: activeAlertList.map((a) => ({
+                              detector: a.detector,
+                              confidence: a.confidence,
+                              technique_id: a.technique_id || a.technique,
+                              decision: a.decision,
+                              raw_evidence: a.evidence,
+                            })),
+                          },
+                          null,
+                          2,
                         )}
-                      </div>
-                    )}
+                      </pre>
+                    </div>
                   </div>
                 )}
               </div>
-            );
-          })
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-import { Shield, Lock, User, AlertCircle, KeyRound, Terminal } from 'lucide-react';
+import { Lock, User, AlertCircle, KeyRound } from 'lucide-react';
 
 export function LoginPage() {
   const { login, isAuthenticated } = useAuth();
@@ -12,7 +12,6 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If already logged in, redirect straight to dashboard
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
@@ -24,13 +23,15 @@ export function LoginPage() {
 
     try {
       await login(username, password);
+      const token = localStorage.getItem('access_token') || `soc_session_${Date.now()}`;
+      localStorage.setItem('soc_session_token', token);
       navigate('/');
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { detail?: string } } };
-        setError(axiosErr.response?.data?.detail || 'Invalid username or password.');
+        setError(axiosErr.response?.data?.detail || 'Invalid credentials.');
       } else {
-        setError('Network error or server unreachable. Please try again.');
+        setError('Network error or platform server unreachable.');
       }
     } finally {
       setIsSubmitting(false);
@@ -44,38 +45,51 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#030712] px-4 py-12">
-      <div className="w-full max-w-md space-y-8 rounded-2xl border border-[#334155] bg-[#0f172a]/90 p-8 shadow-2xl backdrop-blur-xl">
-        {/* Header / Brand */}
+    <div className="relative z-10 flex min-h-screen w-full items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md border border-[#1f1f1f] bg-black/90 p-8 shadow-2xl backdrop-blur-md space-y-6">
+        {/* Header / Brand with 4-Chevron Inward SVG Logo */}
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#22d3ee]/40 bg-[#22d3ee]/10 text-[#22d3ee] shadow-[0_0_20px_rgba(34,211,238,0.2)]">
-            <Shield className="h-8 w-8" />
-          </div>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-[#f1f5f9]">
-            THREAT ATTRIBUTION
+          <svg
+            width="46"
+            height="46"
+            viewBox="0 0 46 46"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="mb-3"
+          >
+            <rect width="46" height="46" fill="#000000" stroke="#1f1f1f" strokeWidth="1" />
+            <path d="M14 11L23 19L32 11" stroke="#c81b1c" strokeWidth="2.5" strokeLinecap="square" />
+            <path d="M14 35L23 27L32 35" stroke="#c81b1c" strokeWidth="2.5" strokeLinecap="square" />
+            <path d="M11 14L19 23L11 32" stroke="#c81b1c" strokeWidth="2.5" strokeLinecap="square" />
+            <path d="M35 14L27 23L35 32" stroke="#c81b1c" strokeWidth="2.5" strokeLinecap="square" />
+            <rect x="22" y="22" width="2" height="2" fill="#ffffff" />
+          </svg>
+
+          <h2 className="font-sg text-xl md:text-2xl font-bold uppercase tracking-wider text-white">
+            Threat Attribution
           </h2>
-          <p className="mt-1 font-mono text-xs text-[#94a3b8]">
-            ENTERPRISE SOC SECURITY GATEWAY
+          <p className="mt-1 font-jb text-xs uppercase tracking-widest text-[#949494]">
+            Enterprise SOC Security Gateway
           </p>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="flex items-center gap-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400">
+          <div className="flex items-center gap-2 border border-[#c81b1c] bg-[#1a0505] p-3 font-jb text-xs text-[#c81b1c]">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 font-jb text-xs">
           <div>
-            <label className="block text-xs font-mono font-medium uppercase text-[#94a3b8]">
+            <label className="block uppercase text-[#949494] mb-1 font-sg tracking-wider">
               Operator Identity (Username)
             </label>
-            <div className="relative mt-1">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#64748b]">
-                <User className="h-4 w-4" />
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#949494]">
+                <User className="h-3.5 w-3.5" />
               </span>
               <input
                 type="text"
@@ -83,18 +97,18 @@ export function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="e.g. admin or analyst"
-                className="w-full rounded-lg border border-[#334155] bg-[#030712] py-2.5 pl-10 pr-4 text-sm text-[#f1f5f9] placeholder-[#64748b] transition focus:border-[#22d3ee]"
+                className="w-full bg-[#050505] border border-[#222222] py-2.5 pl-9 pr-3 text-white placeholder-[#555555]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-mono font-medium uppercase text-[#94a3b8]">
-              Passkey / Password
+            <label className="block uppercase text-[#949494] mb-1 font-sg tracking-wider">
+              Access Secret (Password)
             </label>
-            <div className="relative mt-1">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#64748b]">
-                <Lock className="h-4 w-4" />
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#949494]">
+                <Lock className="h-3.5 w-3.5" />
               </span>
               <input
                 type="password"
@@ -102,7 +116,7 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full rounded-lg border border-[#334155] bg-[#030712] py-2.5 pl-10 pr-4 text-sm text-[#f1f5f9] placeholder-[#64748b] transition focus:border-[#22d3ee]"
+                className="w-full bg-[#050505] border border-[#222222] py-2.5 pl-9 pr-3 text-white placeholder-[#555555]"
               />
             </div>
           </div>
@@ -110,42 +124,59 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#22d3ee] py-2.5 font-medium text-[#030712] transition hover:bg-[#06b6d4] active:scale-[0.98] disabled:opacity-50"
+            className="btn w-full justify-center mt-2"
           >
-            <KeyRound className="h-4 w-4" />
-            <span>{isSubmitting ? 'Authenticating...' : 'Sign In to Console'}</span>
+            {isSubmitting ? (
+              <span>Authenticating...</span>
+            ) : (
+              <>
+                <span>Launch Console Access</span>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+                </svg>
+              </>
+            )}
           </button>
         </form>
 
-        {/* Quick-Fill Seed Credentials for Testing */}
-        <div className="border-t border-[#334155] pt-4">
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#64748b]">
-            <Terminal className="h-3 w-3" />
-            <span>QUICK-FILL TEST ACCOUNTS</span>
+        {/* Quick Fill Test Credentials */}
+        <div className="border-t border-[#1a1a1a] pt-4 space-y-2">
+          <div className="flex items-center gap-1.5 font-sg text-[10px] font-bold uppercase tracking-wider text-[#949494]">
+            <KeyRound className="h-3 w-3 text-[#c81b1c]" />
+            <span>Developer Test Accounts (Live DB)</span>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+
+          <div className="grid grid-cols-3 gap-1.5 font-jb text-[10px]">
             <button
               type="button"
-              onClick={() => setCredentials('admin', 'Admin123!')}
-              className="rounded border border-[#334155] bg-[#1e293b] px-2.5 py-1 text-xs text-[#94a3b8] transition hover:border-[#22d3ee] hover:text-[#22d3ee]"
+              onClick={() => setCredentials('admin', 'admin123')}
+              className="border border-[#222222] bg-[#0a0a0a] p-2 text-center text-[#949494] hover:border-[#c81b1c] hover:text-white"
             >
-              admin (SOC Admin)
+              <span className="block font-bold text-white uppercase">admin</span>
+              <span className="text-[9px] text-[#949494]">Admin Role</span>
             </button>
             <button
               type="button"
-              onClick={() => setCredentials('analyst', 'Analyst123!')}
-              className="rounded border border-[#334155] bg-[#1e293b] px-2.5 py-1 text-xs text-[#94a3b8] transition hover:border-[#22d3ee] hover:text-[#22d3ee]"
+              onClick={() => setCredentials('analyst', 'analyst123')}
+              className="border border-[#222222] bg-[#0a0a0a] p-2 text-center text-[#949494] hover:border-[#c81b1c] hover:text-white"
             >
-              analyst (Investigator)
+              <span className="block font-bold text-white uppercase">analyst</span>
+              <span className="text-[9px] text-[#949494]">Analyst Role</span>
             </button>
             <button
               type="button"
-              onClick={() => setCredentials('viewer', 'Viewer123!')}
-              className="rounded border border-[#334155] bg-[#1e293b] px-2.5 py-1 text-xs text-[#94a3b8] transition hover:border-[#22d3ee] hover:text-[#22d3ee]"
+              onClick={() => setCredentials('viewer', 'viewer123')}
+              className="border border-[#222222] bg-[#0a0a0a] p-2 text-center text-[#949494] hover:border-[#c81b1c] hover:text-white"
             >
-              viewer (Audit)
+              <span className="block font-bold text-white uppercase">viewer</span>
+              <span className="text-[9px] text-[#949494]">Read Only</span>
             </button>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center font-jb text-[10px] text-[#949494]">
+          SECURE PROTOCOL · TLS / OAUTH2 JWT ENFORCED
         </div>
       </div>
     </div>
