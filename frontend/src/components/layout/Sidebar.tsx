@@ -6,6 +6,7 @@ import {
   Activity,
   Layers,
   Terminal,
+  BarChart3,
 } from 'lucide-react';
 
 interface NavItem {
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
   { name: 'Dashboard', to: '/', icon: LayoutDashboard },
   { name: 'Alerts', to: '/alerts', icon: BellRing },
   { name: 'Incidents', to: '/incidents', icon: ShieldAlert },
+  { name: 'ML Evaluation', to: '/evaluation', icon: BarChart3, badge: 'AIT' },
   { name: 'Platform Health', to: '/health', icon: Activity },
 ];
 

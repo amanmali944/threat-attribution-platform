@@ -62,68 +62,33 @@ def find_evaluation_results_path() -> Optional[Path]:
     return None
 
 
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+logger = logging.getLogger(__name__)
+
 @router.get("/summary", response_model=EvaluationSummaryResponse)
 def get_evaluation_summary(
     tenant_id: Optional[str] = Query(None, description="Optional tenant ID"),
     db: Session = Depends(get_db),
 ):
-    # Dynamic evaluation metrics from Developer A evaluation artifact (CR-03 / Section C)
+    # Dynamic evaluation metrics from Developer A evaluation artifact (CR-03 / CR-08)
     eval_file = find_evaluation_results_path()
-    if eval_file:
-        try:
-            with open(eval_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            return EvaluationSummaryResponse.model_validate(data)
-        except Exception:
-            pass
+    if not eval_file:
+        logger.error("Evaluation results file evaluation_results.json not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation results file evaluation_results.json not found. Run evaluation script first.",
+        )
 
-    # Graceful fallback to baseline metrics when evaluation_results.json is not yet generated
-    per_class = {
-        "endpoint_execution": ClassMetric(
-            precision=0.962,
-            recall=0.934,
-            f1=0.948,
-            support=142,
-        ),
-        "network_c2": ClassMetric(
-            precision=0.915,
-            recall=0.892,
-            f1=0.903,
-            support=98,
-        ),
-        "identity_privilege_escalation": ClassMetric(
-            precision=0.954,
-            recall=0.920,
-            f1=0.937,
-            support=64,
-        ),
-        "cloud_persistence": ClassMetric(
-            precision=0.938,
-            recall=0.911,
-            f1=0.924,
-            support=48,
-        ),
-    }
+    try:
+        with open(eval_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return EvaluationSummaryResponse.model_validate(data)
+    except Exception as exc:
+        logger.error("Failed to load or validate evaluation_results.json: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Evaluation results validation failed: {str(exc)}",
+        )
 
-    calibration = CalibrationMetrics(
-        brier_score=0.048,
-        expected_calibration_error=0.032,
-        max_calibration_error=0.071,
-        auc_roc=0.978,
-    )
-
-    return EvaluationSummaryResponse(
-        model_version="v1.4.2",
-        overall_precision=0.942,
-        overall_recall=0.918,
-        overall_f1=0.930,
-        per_class_metrics=per_class,
-        calibration=calibration,
-        attribution={
-            "entry_point_accuracy": 0.942,
-            "path_precision": 0.915,
-            "path_recall": 0.892,
-            "reached_assets_jaccard": 0.880,
-        },
-        evaluation_timestamp=datetime.now(timezone.utc),
-    )

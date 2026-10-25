@@ -72,6 +72,7 @@ def upgrade() -> None:
     op.add_column("attributions", sa.Column("dwell_time_seconds", sa.Float(), nullable=True))
     op.add_column("attributions", sa.Column("explanation", json_type, nullable=True))
     op.add_column("attributions", sa.Column("graph", json_type, nullable=True))
+    op.add_column("attributions", sa.Column("method", sa.String(length=64), nullable=True))
 
     # CR-05: Make actor_name nullable (alter existing column)
     with op.batch_alter_table("attributions") as batch_op:
@@ -82,6 +83,7 @@ def downgrade() -> None:
     # ── Attributions ─────────────────────────────────────────────────────
     with op.batch_alter_table("attributions") as batch_op:
         batch_op.alter_column("actor_name", existing_type=sa.String(length=128), nullable=False)
+    op.drop_column("attributions", "method")
     op.drop_column("attributions", "graph")
     op.drop_column("attributions", "explanation")
     op.drop_column("attributions", "dwell_time_seconds")

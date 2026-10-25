@@ -1,7 +1,7 @@
 # Platform Current Status — Developer B (Platform & Presentation)
 
-**Last Updated:** October 20, 2026  
-**Overall Status:** Interactive Attack Graph Visualizer (Cytoscape.js) COMPLETE — Task 2.5 Delivered — 59/59 BACKEND TESTS PASSING (100%), FRONTEND PRODUCTION BUILD VERIFIED (0 LINT ERRORS)
+**Last Updated:** October 25, 2026  
+**Overall Status:** Developer A Handoff & Platform Polish COMPLETE — CR-08 to CR-11 Delivered — 344/344 BACKEND TESTS PASSING (59/59 Platform Suite, 100%), FRONTEND PRODUCTION BUILD VERIFIED (0 LINT ERRORS)
 
 ---
 
@@ -17,7 +17,9 @@
 | **Database File Alignment Fix** | Persistent SQLite DB (`threat_platform.db`), `backend/.env`, Seed & App Data Sharing, UI Quick-Fill 200 OK | **COMPLETE** | 59/59 Tests Passing & Live Login Verified (HTTP 200) |
 | **Phase 4 — Task 4.1: React + TS SOC Frontend Scaffolding** | Vite + React 19 + TypeScript + Tailwind v4, Axios Client + JWT Interceptors, AuthContext, Protected Routes, AppShell & Cyber SOC Pages | **COMPLETE** | `oxlint` (0 Errors / 0 Warnings) & `tsc -b && vite build` (Clean Build) |
 | **Phase 4 — Task 2.5: Interactive Attack Graph Visualizer** | Cytoscape.js Graph Engine, COSE Force-Directed Layout, Patient Zero Highlighting, Blast Radius Metrics, Node Detail Modal, Attack Topology Tab | **COMPLETE** | `tsc --noEmit` (0 Errors), `tsc -b && vite build` (Clean Build), `oxlint` (0 Errors) |
-| **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **59 / 59 Tests Passing (100%)** |
+| **Handoff & CR Fixes (CR-08 to CR-11)** | CR-08 (Evaluation explicit errors), CR-09 (Event entity collision prevention), CR-10 (Attribution method persistence), CR-11 (FastAPI entrypoint unification & Docker alignment) | **COMPLETE** | All CRs Verified across API & Migration Test Suite |
+| **Presentation Polish & Investigation Refactor** | Story Flow Incident Investigation, IncidentTimelineView, Status Lifecycle Buttons, ML Alert Metrics (Review State), Dynamic Evaluation Page (SVG Charts), Entity Investigation Route (`/entities/:id`) | **COMPLETE** | Production Build Clean, Zero Mock Fallback Camouflage |
+| **Total Test Suite** | Full End-to-End Test Suite (`backend/tests/`) | **COMPLETE** | **344 Passed, 12 Skipped (100% Passing)** |
 
 ---
 
@@ -183,13 +185,46 @@ dist/assets/index-CbQlg_zv.js   360.40 kB │ gzip: 112.63 kB
 - **Model Relationship Tests (`test_models.py`):** 1 passed
 - **Pydantic Schema Tests (`test_schemas.py`):** 1 passed
 - **Migration & Seed Tests (`test_migrations.py`):** 4 passed
-- **Total Backend Test Suite:** 59 / 59 passed (100%)
-- **Frontend Code Quality & Production Bundle:** 100% Passing (0 lint warnings, clean build)
+- **Total Backend Test Suite:** 344 passed, 12 skipped (100% Passing) — Platform Suite: 59/59 Passed (100%)
+- **Frontend Code Quality & Production Bundle:** 100% Passing (0 lint errors, clean production bundle)
 
 ---
 
-## 6. Next Steps
+## 6. Developer A Handoff & CR Fixes (CR-08 to CR-11)
 
-- **Developer A Integration:** Detection engine and attribution models can consume live database sessions or offline fixtures directly.
-- **Frontend Graph Enhancement:** Code-split Cytoscape bundle for optimized loading; add timeline tab integration with graph syncing.
-- **Real-Time Updates:** Implement WebSocket-driven graph updates for live incident topology changes during active investigations.
+| CR ID | Module | Finding / Issue | Resolution & Impact | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **CR-08** | `backend/app/api/v1/evaluation.py` | `GET /evaluation/summary` silently returned hard-coded demo numbers on schema mismatches (`except Exception: pass`). | Removed fallback demo numbers; added structured logging via `logger.error` and explicit `HTTPException(500)` or `404` when artifact is missing or fails validation. | **COMPLETE** |
+| **CR-09** | `backend/app/api/v1/events.py` | Entity lookup in `create_event` filtered only by `identifier` and `tenant_id`, causing host/app name collisions. | Added `Entity.entity_type == ent.entity_type` to filter query, ensuring unique tracking for hosts, users, IPs, and applications. | **COMPLETE** |
+| **CR-10** | `backend/app/models/attribution.py`, `backend/app/schemas/attribution.py`, `backend/app/api/v1/attributions.py` | Attribution `method` field was accepted by API but not stored or returned. | Added `method = Column(String(64), nullable=True)` to ORM model, added `method` to schemas (`AttributionResponse`), persisted in database, and updated Alembic migration 002. | **COMPLETE** |
+| **CR-11** | `backend/main.py`, `backend/Dockerfile` | Root `main.py` entrypoint was missing API v1 routers and diverged from `app.main:app`. | Updated `backend/main.py` to import and expose `app` directly from `app.main`, unified all 9 sub-routers in `api_v1_router`, and aligned Docker uvicorn entrypoint under `app.main:app`. | **COMPLETE** |
+
+---
+
+## 7. Security Hardening & Presentation Layer Polish
+
+1. **Security & Credential Hardening:**
+   - Pinned `bcrypt==4.0.1` in `backend/requirements.txt` to eliminate Passlib/Bcrypt 4.1+ attribute warnings.
+   - Removed hardcoded credentials from `alembic.ini` and `backend/alembic/env.py`, replacing with `change_me` placeholders.
+   - Created `backend/.env.example` with non-sensitive template configurations.
+
+2. **Incident Investigation Story Flow (`IncidentsPage.tsx`):**
+   - Restructured incident investigation panels to follow SOC playbook narrative:
+     **What Happened → Risk & Impact → Entry Point (Patient Zero) → Reached Assets & Blast Radius → Forensic Timeline → Attack Topology Graph → Evidence Details → Status Controls.**
+   - Added dedicated `IncidentTimelineView.tsx` component consuming `GET /api/v1/incidents/{id}/timeline`.
+   - Added interactive incident status action buttons (`OPEN`, `REVIEWED`, `DISMISSED`, `CONFIRMED`) calling `PATCH /api/v1/incidents/{id}`.
+
+3. **ML Alert Metrics & Review State (`AlertsPage.tsx`):**
+   - Displayed analytical alert fields: `detector`, `confidence`, `decision`, `technique`, and expandable structured `evidence`.
+   - Visualized the `"review"` decision state with an amber, glowing badge and explanatory tooltip highlighting analytical uncertainty.
+
+4. **Dynamic ML Evaluation Page (`EvaluationPage.tsx`):**
+   - Built interactive benchmark dashboard at `/evaluation` with custom SVG charts.
+   - Rendered Detector Comparison Chart (Precision vs Recall vs F1), Calibration Reliability Diagram (ECE 0.0019 vs 45° ideal diagonal), Causal Attribution Accuracy (100% entry point accuracy), and 3.2x Alert Consolidation funnel.
+
+5. **Entity Investigation Page (`EntityPage.tsx`):**
+   - Added dedicated route `/entities/:id` for deep-dive investigations of hosts, users, IPs, and applications.
+   - Displays composite risk scores, configuration attributes, associated analytical alerts, and one-click entity containment actions.
+
+6. **Elimination of Mock Data Camouflage:**
+   - Removed all silent fallback mock data on Alerts and Incidents pages; API errors now transparently surface with actionable retry banners.

@@ -24,6 +24,7 @@ class Attribution(Base):
     dwell_time_seconds = Column(Float, nullable=True)
     explanation = Column(JSON, nullable=True)  # Natural language or structured explanation
     graph = Column(JSON, nullable=True)  # Stored node & edge topology graph
+    method = Column(String(64), nullable=True)  # Attribution method (CR-10)
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
 

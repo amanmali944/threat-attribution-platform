@@ -53,7 +53,7 @@ def get_url() -> str:
         return settings.DATABASE_URL
     except Exception:
         fallback = config.get_main_option("sqlalchemy.url")
-        return fallback or "postgresql://threat_user:threat_secure_password_2026@localhost:5432/threat_platform"
+        return fallback or "postgresql://threat_user:change_me@localhost:5432/threat_platform"
 
 
 def run_migrations_offline() -> None:

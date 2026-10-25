@@ -75,6 +75,7 @@ def create_event(event_in: EventCreate, db: Session = Depends(get_db)):
                 db.query(Entity)
                 .filter(
                     Entity.tenant_id == event_in.tenant_id,
+                    Entity.entity_type == ent.entity_type,
                     Entity.identifier == ent.identifier,
                 )
                 .first()

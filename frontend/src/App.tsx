@@ -7,6 +7,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
 import { HealthPage } from './pages/HealthPage';
+import { EvaluationPage } from './pages/EvaluationPage';
+import { EntityPage } from './pages/EntityPage';
 
 export function App() {
   return (
@@ -28,6 +30,8 @@ export function App() {
             <Route path="dashboard" element={<Navigate to="/" replace />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="incidents" element={<IncidentsPage />} />
+            <Route path="evaluation" element={<EvaluationPage />} />
+            <Route path="entities/:id" element={<EntityPage />} />
             <Route path="health" element={<HealthPage />} />
           </Route>
 

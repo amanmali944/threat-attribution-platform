@@ -45,6 +45,7 @@ def create_attribution(attribution_in: AttributionCreate, db: Session = Depends(
         dwell_time_seconds=attribution_in.dwell_time_seconds,
         explanation=attribution_in.explanation,
         graph=attribution_in.graph,
+        method=attribution_in.method,
     )
 
     db.add(db_attribution)
@@ -69,6 +70,7 @@ def create_attribution(attribution_in: AttributionCreate, db: Session = Depends(
         dwell_time_seconds=db_attribution.dwell_time_seconds,
         explanation=db_attribution.explanation,
         graph=db_attribution.graph,
+        method=db_attribution.method,
         created_at=db_attribution.created_at or datetime.now(timezone.utc),
     )
 
@@ -119,6 +121,7 @@ def list_attributions(
                     dwell_time_seconds=fa.get("dwell_time_seconds"),
                     explanation=fa.get("explanation"),
                     graph=fa.get("graph"),
+                    method=fa.get("method"),
                     created_at=created_dt,
                 )
             )
@@ -153,6 +156,7 @@ def list_attributions(
             dwell_time_seconds=item.dwell_time_seconds,
             explanation=item.explanation,
             graph=item.graph,
+            method=item.method,
             created_at=item.created_at,
         )
         for item in items
@@ -190,6 +194,7 @@ def get_attribution(
             dwell_time_seconds=attr.dwell_time_seconds,
             explanation=attr.explanation,
             graph=attr.graph,
+            method=attr.method,
             created_at=attr.created_at,
         )
 
@@ -217,6 +222,7 @@ def get_attribution(
                 dwell_time_seconds=fa.get("dwell_time_seconds"),
                 explanation=fa.get("explanation"),
                 graph=fa.get("graph"),
+                method=fa.get("method"),
                 created_at=parse_datetime(fa.get("created_at")),
             )
 

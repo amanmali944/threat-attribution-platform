@@ -54,6 +54,7 @@ class AttributionResponse(BaseModel):
     dwell_time_seconds: Optional[float] = None
     explanation: Optional[Any] = None
     graph: Optional[Dict[str, Any]] = None
+    method: Optional[str] = None  # Attribution method (CR-10)
 
     created_at: datetime
 
