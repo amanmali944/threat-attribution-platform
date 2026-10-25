@@ -1,0 +1,34 @@
+{
+  "dataset": "ait-lds-v2/russellmitchell",
+  "window_seconds": 300,
+  "incident": {
+    "start": "2022-01-24T03:00:00Z",
+    "end": "2022-01-24T04:40:00Z"
+  },
+  "label_classes": {
+    "incident": [
+      "foothold", "escalate",
+      "attacker_vpn", "dns_scan", "traceroute", "network_scan", "service_scan",
+      "dirb", "wpscan", "attacker_http", "webshell_upload", "webshell_cmd",
+      "attacker_change_user", "escalated_command", "escalated_sudo_command", "escalated_sudo_session"
+    ],
+    "exfiltration": ["dnsteal", "dnsteal-received", "dnsteal-dropped"]
+  },
+  "ignored_labels": ["attacker"],
+  "splits": {
+    "baseline":   ["2022-01-21T00:00:00Z", "2022-01-22T00:00:00Z"],
+    "train":      ["2022-01-22T00:00:00Z", "2022-01-23T00:00:00Z"],
+    "validation": ["2022-01-23T00:00:00Z", "2022-01-23T23:00:00Z"],
+    "gap":        ["2022-01-23T23:00:00Z", "2022-01-24T00:00:00Z"],
+    "test":       ["2022-01-24T00:00:00Z", "2022-01-25T00:00:00Z"]
+  },
+  "provenance": {
+    "source": "AIT Log Data Set V2.0 (Zenodo 10.5281/zenodo.5789064, CC BY-NC-SA 4.0), scenario russellmitchell; per-line labels from the dataset's labels/ directory, carried by the adapters into labels.jsonl.",
+    "incident_window": "Labelled intrusion events span 2022-01-24 03:01:00 (VPN login with jhall's certificate) to 04:38:06 (sudo cat /etc/shadow as jhall), matching the dataset's attack timeline. The interval is widened to window boundaries: 03:00-04:40. The builder checks that every incident-class event falls inside it.",
+    "label_classes": "Every label observed in the converted sources is mapped. 'incident' = the multi-step intrusion (VPN foothold, DNS/network/service scans, dirb, wpscan, webshell upload and commands, su to jhall, sudo). 'exfiltration' = DNSteal traffic from one internal host. An unmapped label stops the build.",
+    "ignored_labels": "'attacker' is an umbrella label that, in this slice, sits only on the DNSteal lines (17,693 of 17,693); the class comes from the dnsteal* labels instead.",
+    "exfiltration_overlaps_training": "DNSteal is labelled from the first minute of the data (2022-01-21 00:00:09) to 2022-01-24 13:52:15, so it is present in baseline, train and validation. There is no clean pre-exfiltration period. It is a separate class, never the incident under test. Two variants are built: 'as-is' (baseline fitted on everything in the baseline split, as an unsupervised system would see it) and 'clean-baseline' (exfiltration-class events removed from the baseline fit using the labels - disclosed, optimistic for exfiltration).",
+    "splits": "Time-ordered. baseline (Jan 21): fit the baseline only. train (Jan 22): fit unsupervised models. validation (Jan 23 00-23h): calibrate thresholds on background windows. gap (Jan 23 23-24h): excluded. test (Jan 24): the intrusion, the end of the exfiltration, and ~19 h afterwards. Web traffic starts at 05:55 on Jan 21, so the baseline sees under a day of web activity.",
+    "seen_before_evaluation": "The attack timeline and label names were read to write this spec. Detector design (rules-1.1.0 calibration change) was decided on Org Y before any AIT detector output was looked at."
+  }
+}

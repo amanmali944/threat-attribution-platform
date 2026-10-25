@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy import Column, String, DateTime, Text, Table, ForeignKey
+from sqlalchemy import Column, String, DateTime, Text, Table, ForeignKey, Float, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -24,6 +24,18 @@ class Alert(Base):
     severity = Column(String(16), nullable=False, default="medium")
     status = Column(String(32), nullable=False, default="open")
     observed_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # Developer A Analytical Detection Extension Fields (CR-03)
+    detector = Column(String(64), nullable=True, index=True)
+    detector_version = Column(String(32), nullable=True)
+    technique = Column(String(64), nullable=True, index=True)
+    technique_id = Column(String(32), nullable=True, index=True)
+    entity_id = Column(String(64), nullable=True, index=True)
+    score = Column(Float, nullable=True)
+    confidence = Column(Float, nullable=True)
+    decision = Column(String(32), nullable=True)
+    evidence = Column(JSON, nullable=True, default=list)
+
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
 
     events = relationship("Event", secondary="event_alerts", back_populates="alerts")

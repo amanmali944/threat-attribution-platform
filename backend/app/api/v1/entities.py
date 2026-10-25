@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.events import load_fixture, parse_datetime
 from app.core.database import get_db
-from app.models.entity import Entity
+from app.models.entity import Entity, generate_entity_id
 
 router = APIRouter(prefix="/entities", tags=["Entities"])
 
@@ -39,7 +39,9 @@ class EntityListResponse(BaseModel):
 
 @router.post("", response_model=EntityResponse, status_code=status.HTTP_201_CREATED)
 def create_entity(entity_in: EntityCreate, db: Session = Depends(get_db)):
+    ent_id = generate_entity_id(entity_in.entity_type, entity_in.tenant_id, entity_in.identifier)
     db_entity = Entity(
+        id=ent_id,
         tenant_id=entity_in.tenant_id,
         entity_type=entity_in.entity_type,
         identifier=entity_in.identifier,
@@ -56,7 +58,7 @@ def create_entity(entity_in: EntityCreate, db: Session = Depends(get_db)):
 @router.get("", response_model=EntityListResponse)
 def list_entities(
     tenant_id: str = Query(..., description="Tenant ID filter"),
-    entity_type: Optional[str] = Query(None, description="Entity type filter (host, user, ip, domain)"),
+    entity_type: Optional[str] = Query(None, description="Entity type filter (host, user, ip, domain, cloud_identity, application, database, device)"),
     identifier: Optional[str] = Query(None, description="Identifier substring filter"),
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -83,9 +85,10 @@ def list_entities(
                 e_type = ent.get("entity_type")
                 e_ident = ent.get("identifier")
                 key = f"{e_type}:{e_ident}"
+                deterministic_id = generate_entity_id(e_type, tenant_id, e_ident)
                 if key not in seen_entities:
                     seen_entities[key] = {
-                        "id": f"ent-{abs(hash(key)) % 10000}",
+                        "id": deterministic_id,
                         "tenant_id": tenant_id,
                         "entity_type": e_type,
                         "identifier": e_ident,
@@ -139,13 +142,14 @@ def get_entity(
     fixture_events = load_fixture("events.json")
     for fe in fixture_events:
         for ent in fe.get("entities", []):
-            candidate_id = f"ent-{ent.get('entity_type')}-{ent.get('identifier')}"
-            hash_id = f"ent-{abs(hash(f'{ent.get('entity_type')}:{ent.get('identifier')}')) % 10000}"
-            if entity_id in [candidate_id, hash_id]:
+            effective_tenant = tenant_id or fe.get("tenant_id") or "tenant-default-001"
+            deterministic_id = generate_entity_id(ent.get("entity_type"), effective_tenant, ent.get("identifier"))
+            legacy_id = f"ent-{ent.get('entity_type')}-{ent.get('identifier')}"
+            if entity_id in [deterministic_id, legacy_id]:
                 obs_dt = parse_datetime(fe.get("observed_at"))
                 return EntityResponse(
                     id=entity_id,
-                    tenant_id=tenant_id or fe.get("tenant_id"),
+                    tenant_id=effective_tenant,
                     entity_type=ent.get("entity_type"),
                     identifier=ent.get("identifier"),
                     properties={"source_layer": fe.get("source_layer")},

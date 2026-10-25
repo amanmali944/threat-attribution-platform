@@ -1,0 +1,3419 @@
+{
+  "evaluated_at": "2026-10-21T14:21:40Z",
+  "folds": {
+    "fox": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 3.5,
+        "pipeline_fused_alerts_decision_alert": 3.5,
+        "pipeline_windows_alert_or_review": 5.5,
+        "suppressed_duplicates": 4,
+        "windows_flagged_before_fusion": 5.5
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0024,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0019,
+            "n": 2104
+          },
+          {
+            "fraction_hostile": 0.9,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 0.9853,
+            "n": 10
+          }
+        ],
+        "brier": 0.002804,
+        "ece": 0.0008,
+        "n": 2114
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 11,
+          "review": 0,
+          "suppress": 2103
+        },
+        "pipeline_rules_first": {
+          "alert": 11,
+          "review": 0,
+          "suppress": 2103
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:background": 2,
+        "alert:incident": 5
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.0652,
+          "iforest.missing": 0.0892,
+          "iforest.score": 2.1816,
+          "log.dns_long_names": 0.3345,
+          "log.event_count": -0.176,
+          "log.new_target": 0.1042,
+          "log.privileged_ops": 0.3863,
+          "novelty.new_source_ip": 0.191,
+          "peer.volume_z": -0.1511,
+          "rules.count": 1.0778,
+          "rules.high": 0.5093,
+          "rules.medium": 0.0,
+          "timing.off_hours": -0.1698,
+          "type.host": 0.0706,
+          "type.ip": 0.1862,
+          "type.user": -0.2004
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.07142857142857142,
+          "tau_review": 0.07142857142857142
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "harrison",
+            "russellmitchell",
+            "santos",
+            "shaw",
+            "wardbeck",
+            "wheeler",
+            "wilson"
+          ],
+          "hostile_windows": 357,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0019,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0019,
+                "n": 13440
+              },
+              {
+                "fraction_hostile": 0.4,
+                "hi": 0.5,
+                "lo": 0.4,
+                "mean_confidence": 0.4,
+                "n": 5
+              },
+              {
+                "fraction_hostile": 0.991,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.991,
+                "n": 332
+              }
+            ],
+            "brier": 0.002172,
+            "ece": 0.0,
+            "n": 13777
+          },
+          "windows": 13777
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 2,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 9,
+          "hostile_total": 14,
+          "per_day": 5.5,
+          "precision": 0.8182,
+          "recall": 0.6429
+        },
+        "fusion alert": {
+          "false_alarms": 2,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 9,
+          "hostile_total": 14,
+          "per_day": 5.5,
+          "precision": 0.8182,
+          "recall": 0.6429
+        },
+        "fusion alert|review": {
+          "false_alarms": 2,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 9,
+          "hostile_total": 14,
+          "per_day": 5.5,
+          "precision": 0.8182,
+          "recall": 0.6429
+        },
+        "pipeline alert": {
+          "false_alarms": 2,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 9,
+          "hostile_total": 14,
+          "per_day": 5.5,
+          "precision": 0.8182,
+          "recall": 0.6429
+        },
+        "pipeline alert|review": {
+          "false_alarms": 2,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 9,
+          "hostile_total": 14,
+          "per_day": 5.5,
+          "precision": 0.8182,
+          "recall": 0.6429
+        },
+        "rules any": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 0.5,
+          "hostile_flagged": 9,
+          "hostile_total": 14,
+          "per_day": 5.0,
+          "precision": 0.9,
+          "recall": 0.6429
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 4,
+          "hostile_total": 14,
+          "per_day": 2.0,
+          "precision": 1.0,
+          "recall": 0.2857
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.3677,
+          "n": 2114,
+          "positives": 14,
+          "roc_auc": 0.6246
+        },
+        "fusion": {
+          "average_precision": 0.6322,
+          "n": 2114,
+          "positives": 14,
+          "roc_auc": 0.9246
+        },
+        "iforest": {
+          "average_precision": 0.0799,
+          "n": 2114,
+          "positives": 14,
+          "roc_auc": 0.6154
+        },
+        "rules_any": {
+          "average_precision": 0.5809,
+          "n": 2114,
+          "positives": 14,
+          "roc_auc": 0.8212
+        },
+        "rules_high": {
+          "average_precision": 0.2904,
+          "n": 2114,
+          "positives": 14,
+          "roc_auc": 0.6429
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 9,
+            "windows": 14
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 9,
+            "windows": 14
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 9,
+            "windows": 14
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 9,
+            "windows": 14
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 9,
+            "windows": 14
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 4
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 6
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 4
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 6
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 4
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 6
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 4
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 6
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 4
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 6
+          }
+        }
+      },
+      "test_days": 2,
+      "test_hostile_windows": 14,
+      "test_windows": 2114,
+      "train_scenarios": [
+        "harrison",
+        "russellmitchell",
+        "santos",
+        "shaw",
+        "wardbeck",
+        "wheeler",
+        "wilson"
+      ]
+    },
+    "harrison": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 12.0,
+        "pipeline_fused_alerts_decision_alert": 12.0,
+        "pipeline_windows_alert_or_review": 130.0,
+        "suppressed_duplicates": 118,
+        "windows_flagged_before_fusion": 123.0
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0068,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0023,
+            "n": 1030
+          },
+          {
+            "fraction_hostile": 1.0,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 0.9584,
+            "n": 122
+          }
+        ],
+        "brier": 0.006316,
+        "ece": 0.0085,
+        "n": 1152
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 130,
+          "review": 0,
+          "suppress": 1022
+        },
+        "pipeline_rules_first": {
+          "alert": 130,
+          "review": 0,
+          "suppress": 1022
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:background": 6,
+        "alert:exfiltration": 1,
+        "alert:incident": 5
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.0542,
+          "iforest.missing": 0.0613,
+          "iforest.score": 2.0852,
+          "log.dns_long_names": 0.1647,
+          "log.event_count": -0.0848,
+          "log.new_target": 0.1856,
+          "log.privileged_ops": 0.36,
+          "novelty.new_source_ip": 0.1859,
+          "peer.volume_z": -0.2384,
+          "rules.count": 0.9503,
+          "rules.high": 0.3647,
+          "rules.medium": 0.0,
+          "timing.off_hours": -0.207,
+          "type.host": 0.0879,
+          "type.ip": 0.1796,
+          "type.user": -0.1971
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.05,
+          "tau_review": 0.05
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "fox",
+            "russellmitchell",
+            "santos",
+            "shaw",
+            "wardbeck",
+            "wheeler",
+            "wilson"
+          ],
+          "hostile_windows": 242,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0018,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0018,
+                "n": 14519
+              },
+              {
+                "fraction_hostile": 0.9818,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.9818,
+                "n": 220
+              }
+            ],
+            "brier": 0.002008,
+            "ece": 0.0,
+            "n": 14739
+          },
+          "windows": 14739
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 122,
+          "hostile_total": 129,
+          "per_day": 123.0,
+          "precision": 0.9919,
+          "recall": 0.9457
+        },
+        "fusion alert": {
+          "false_alarms": 8,
+          "false_alarms_per_day": 8.0,
+          "hostile_flagged": 122,
+          "hostile_total": 129,
+          "per_day": 130.0,
+          "precision": 0.9385,
+          "recall": 0.9457
+        },
+        "fusion alert|review": {
+          "false_alarms": 8,
+          "false_alarms_per_day": 8.0,
+          "hostile_flagged": 122,
+          "hostile_total": 129,
+          "per_day": 130.0,
+          "precision": 0.9385,
+          "recall": 0.9457
+        },
+        "pipeline alert": {
+          "false_alarms": 8,
+          "false_alarms_per_day": 8.0,
+          "hostile_flagged": 122,
+          "hostile_total": 129,
+          "per_day": 130.0,
+          "precision": 0.9385,
+          "recall": 0.9457
+        },
+        "pipeline alert|review": {
+          "false_alarms": 8,
+          "false_alarms_per_day": 8.0,
+          "hostile_flagged": 122,
+          "hostile_total": 129,
+          "per_day": 130.0,
+          "precision": 0.9385,
+          "recall": 0.9457
+        },
+        "rules any": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 122,
+          "hostile_total": 129,
+          "per_day": 122.0,
+          "precision": 1.0,
+          "recall": 0.9457
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 115,
+          "hostile_total": 129,
+          "per_day": 115.0,
+          "precision": 1.0,
+          "recall": 0.8915
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.1986,
+          "n": 1152,
+          "positives": 129,
+          "roc_auc": 0.6181
+        },
+        "fusion": {
+          "average_precision": 0.9646,
+          "n": 1152,
+          "positives": 129,
+          "roc_auc": 0.9821
+        },
+        "iforest": {
+          "average_precision": 0.1209,
+          "n": 1152,
+          "positives": 129,
+          "roc_auc": 0.3154
+        },
+        "rules_any": {
+          "average_precision": 0.9518,
+          "n": 1152,
+          "positives": 129,
+          "roc_auc": 0.9729
+        },
+        "rules_high": {
+          "average_precision": 0.9036,
+          "n": 1152,
+          "positives": 129,
+          "roc_auc": 0.9457
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 111,
+            "windows": 112
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 17
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 111,
+            "windows": 112
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 17
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 111,
+            "windows": 112
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 17
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 111,
+            "windows": 112
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 17
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 111,
+            "windows": 112
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 17
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": false,
+            "flagged": 0,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 7,
+            "windows": 10
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": false,
+            "flagged": 0,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 7,
+            "windows": 10
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": false,
+            "flagged": 0,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 7,
+            "windows": 10
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": false,
+            "flagged": 0,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 7,
+            "windows": 10
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": false,
+            "flagged": 0,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 7,
+            "windows": 10
+          }
+        }
+      },
+      "test_days": 1.0,
+      "test_hostile_windows": 129,
+      "test_windows": 1152,
+      "train_scenarios": [
+        "fox",
+        "russellmitchell",
+        "santos",
+        "shaw",
+        "wardbeck",
+        "wheeler",
+        "wilson"
+      ]
+    },
+    "russellmitchell": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 18.0,
+        "pipeline_fused_alerts_decision_alert": 7.0,
+        "pipeline_windows_alert_or_review": 187.0,
+        "suppressed_duplicates": 169,
+        "windows_flagged_before_fusion": 173.0
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0043,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0023,
+            "n": 1157
+          },
+          {
+            "fraction_hostile": 0.5,
+            "hi": 0.4,
+            "lo": 0.3,
+            "mean_confidence": 0.3333,
+            "n": 2
+          },
+          {
+            "fraction_hostile": 1.0,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 0.9887,
+            "n": 171
+          }
+        ],
+        "brier": 0.004176,
+        "ece": 0.0035,
+        "n": 1330
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 173,
+          "review": 14,
+          "suppress": 1143
+        },
+        "pipeline_rules_first": {
+          "alert": 173,
+          "review": 14,
+          "suppress": 1143
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:background": 1,
+        "alert:exfiltration": 1,
+        "alert:incident": 5,
+        "review:background": 10,
+        "review:incident": 1
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.067,
+          "iforest.missing": 0.0598,
+          "iforest.score": 1.8454,
+          "log.dns_long_names": 0.13,
+          "log.event_count": -0.179,
+          "log.new_target": 0.1135,
+          "log.privileged_ops": 0.3301,
+          "novelty.new_source_ip": 0.1452,
+          "peer.volume_z": -0.2495,
+          "rules.count": 0.932,
+          "rules.high": 0.2797,
+          "rules.medium": 0.0,
+          "timing.off_hours": -1.6522,
+          "type.host": 0.0431,
+          "type.ip": 0.1851,
+          "type.user": -0.1946
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.03571428571428571,
+          "tau_review": 0.007326007326007326
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "fox",
+            "harrison",
+            "santos",
+            "shaw",
+            "wardbeck",
+            "wheeler",
+            "wilson"
+          ],
+          "hostile_windows": 194,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0018,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0018,
+                "n": 14387
+              },
+              {
+                "fraction_hostile": 0.3333,
+                "hi": 0.4,
+                "lo": 0.3,
+                "mean_confidence": 0.3333,
+                "n": 6
+              },
+              {
+                "fraction_hostile": 0.9881,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.9881,
+                "n": 168
+              }
+            ],
+            "brier": 0.001996,
+            "ece": 0.0,
+            "n": 14561
+          },
+          "windows": 14561
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 172,
+          "hostile_total": 177,
+          "per_day": 173.0,
+          "precision": 0.9942,
+          "recall": 0.9718
+        },
+        "fusion alert": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 172,
+          "hostile_total": 177,
+          "per_day": 173.0,
+          "precision": 0.9942,
+          "recall": 0.9718
+        },
+        "fusion alert|review": {
+          "false_alarms": 14,
+          "false_alarms_per_day": 14.0,
+          "hostile_flagged": 173,
+          "hostile_total": 177,
+          "per_day": 187.0,
+          "precision": 0.9251,
+          "recall": 0.9774
+        },
+        "pipeline alert": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 172,
+          "hostile_total": 177,
+          "per_day": 173.0,
+          "precision": 0.9942,
+          "recall": 0.9718
+        },
+        "pipeline alert|review": {
+          "false_alarms": 14,
+          "false_alarms_per_day": 14.0,
+          "hostile_flagged": 173,
+          "hostile_total": 177,
+          "per_day": 187.0,
+          "precision": 0.9251,
+          "recall": 0.9774
+        },
+        "rules any": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 172,
+          "hostile_total": 177,
+          "per_day": 172.0,
+          "precision": 1.0,
+          "recall": 0.9718
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 171,
+          "hostile_total": 177,
+          "per_day": 171.0,
+          "precision": 1.0,
+          "recall": 0.9661
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.1871,
+          "n": 1330,
+          "positives": 177,
+          "roc_auc": 0.6006
+        },
+        "fusion": {
+          "average_precision": 0.9801,
+          "n": 1330,
+          "positives": 177,
+          "roc_auc": 0.9811
+        },
+        "iforest": {
+          "average_precision": 0.0983,
+          "n": 1330,
+          "positives": 177,
+          "roc_auc": 0.3495
+        },
+        "rules_any": {
+          "average_precision": 0.9755,
+          "n": 1330,
+          "positives": 177,
+          "roc_auc": 0.9859
+        },
+        "rules_high": {
+          "average_precision": 0.9706,
+          "n": 1330,
+          "positives": 177,
+          "roc_auc": 0.9831
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 167,
+            "windows": 167
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 10
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 167,
+            "windows": 167
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 10
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 167,
+            "windows": 167
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 6,
+            "windows": 10
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 167,
+            "windows": 167
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 10
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": {
+            "detected": true,
+            "flagged": 167,
+            "windows": 167
+          },
+          "incident": {
+            "detected": true,
+            "flagged": 6,
+            "windows": 10
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 5
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 5
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 5
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 5
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 5
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        }
+      },
+      "test_days": 1.0,
+      "test_hostile_windows": 177,
+      "test_windows": 1330,
+      "train_scenarios": [
+        "fox",
+        "harrison",
+        "santos",
+        "shaw",
+        "wardbeck",
+        "wheeler",
+        "wilson"
+      ]
+    },
+    "santos": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 5.0,
+        "pipeline_fused_alerts_decision_alert": 5.0,
+        "pipeline_windows_alert_or_review": 5.0,
+        "suppressed_duplicates": 0,
+        "windows_flagged_before_fusion": 5.0
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0024,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0019,
+            "n": 1635
+          },
+          {
+            "fraction_hostile": 1.0,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 0.9891,
+            "n": 5
+          }
+        ],
+        "brier": 0.002428,
+        "ece": 0.0006,
+        "n": 1640
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 5,
+          "review": 0,
+          "suppress": 1635
+        },
+        "pipeline_rules_first": {
+          "alert": 5,
+          "review": 0,
+          "suppress": 1635
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:incident": 5
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.0863,
+          "iforest.missing": 0.0757,
+          "iforest.score": 1.8821,
+          "log.dns_long_names": 0.3107,
+          "log.event_count": -0.201,
+          "log.new_target": 0.1979,
+          "log.privileged_ops": 0.3782,
+          "novelty.new_source_ip": 0.1684,
+          "peer.volume_z": -0.1417,
+          "rules.count": 1.0668,
+          "rules.high": 0.4642,
+          "rules.medium": 0.0,
+          "timing.off_hours": -0.1787,
+          "type.host": 0.108,
+          "type.ip": 0.1727,
+          "type.user": -0.1928
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.2,
+          "tau_review": 0.2
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "fox",
+            "harrison",
+            "russellmitchell",
+            "shaw",
+            "wardbeck",
+            "wheeler",
+            "wilson"
+          ],
+          "hostile_windows": 362,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0019,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0019,
+                "n": 13904
+              },
+              {
+                "fraction_hostile": 0.2,
+                "hi": 0.3,
+                "lo": 0.2,
+                "mean_confidence": 0.2,
+                "n": 10
+              },
+              {
+                "fraction_hostile": 0.9881,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.9881,
+                "n": 337
+              }
+            ],
+            "brier": 0.002266,
+            "ece": 0.0,
+            "n": 14251
+          },
+          "windows": 14251
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 9,
+          "per_day": 5.0,
+          "precision": 1.0,
+          "recall": 0.5556
+        },
+        "fusion alert": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 9,
+          "per_day": 5.0,
+          "precision": 1.0,
+          "recall": 0.5556
+        },
+        "fusion alert|review": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 9,
+          "per_day": 5.0,
+          "precision": 1.0,
+          "recall": 0.5556
+        },
+        "pipeline alert": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 9,
+          "per_day": 5.0,
+          "precision": 1.0,
+          "recall": 0.5556
+        },
+        "pipeline alert|review": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 9,
+          "per_day": 5.0,
+          "precision": 1.0,
+          "recall": 0.5556
+        },
+        "rules any": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 9,
+          "per_day": 5.0,
+          "precision": 1.0,
+          "recall": 0.5556
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 4,
+          "hostile_total": 9,
+          "per_day": 4.0,
+          "precision": 1.0,
+          "recall": 0.4444
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.1175,
+          "n": 1640,
+          "positives": 9,
+          "roc_auc": 0.4222
+        },
+        "fusion": {
+          "average_precision": 0.5718,
+          "n": 1640,
+          "positives": 9,
+          "roc_auc": 0.9371
+        },
+        "iforest": {
+          "average_precision": 0.1267,
+          "n": 1640,
+          "positives": 9,
+          "roc_auc": 0.4888
+        },
+        "rules_any": {
+          "average_precision": 0.558,
+          "n": 1640,
+          "positives": 9,
+          "roc_auc": 0.7778
+        },
+        "rules_high": {
+          "average_precision": 0.4475,
+          "n": 1640,
+          "positives": 9,
+          "roc_auc": 0.7222
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 9
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 9
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 9
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 9
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 9
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        }
+      },
+      "test_days": 1.0,
+      "test_hostile_windows": 9,
+      "test_windows": 1640,
+      "train_scenarios": [
+        "fox",
+        "harrison",
+        "russellmitchell",
+        "shaw",
+        "wardbeck",
+        "wheeler",
+        "wilson"
+      ]
+    },
+    "shaw": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 2.5,
+        "pipeline_fused_alerts_decision_alert": 2.5,
+        "pipeline_windows_alert_or_review": 2.5,
+        "suppressed_duplicates": 0,
+        "windows_flagged_before_fusion": 4.5
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0011,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0022,
+            "n": 2845
+          },
+          {
+            "fraction_hostile": 1.0,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 0.9809,
+            "n": 5
+          }
+        ],
+        "brier": 0.00105,
+        "ece": 0.0011,
+        "n": 2850
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 5,
+          "review": 0,
+          "suppress": 2845
+        },
+        "pipeline_rules_first": {
+          "alert": 5,
+          "review": 0,
+          "suppress": 2845
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:incident": 5
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.0868,
+          "iforest.missing": 0.1009,
+          "iforest.score": 1.7701,
+          "log.dns_long_names": 0.3126,
+          "log.event_count": -0.0827,
+          "log.new_target": 0.1727,
+          "log.privileged_ops": 0.3547,
+          "novelty.new_source_ip": 0.1759,
+          "peer.volume_z": -0.1876,
+          "rules.count": 1.0773,
+          "rules.high": 0.4591,
+          "rules.medium": 0.0,
+          "timing.off_hours": -0.1828,
+          "type.host": 0.0674,
+          "type.ip": 0.1742,
+          "type.user": -0.1886
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.2222222222222222,
+          "tau_review": 0.2222222222222222
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "fox",
+            "harrison",
+            "russellmitchell",
+            "santos",
+            "wardbeck",
+            "wheeler",
+            "wilson"
+          ],
+          "hostile_windows": 363,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0022,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0022,
+                "n": 12695
+              },
+              {
+                "fraction_hostile": 0.2222,
+                "hi": 0.3,
+                "lo": 0.2,
+                "mean_confidence": 0.2222,
+                "n": 9
+              },
+              {
+                "fraction_hostile": 0.9881,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.9881,
+                "n": 337
+              }
+            ],
+            "brier": 0.00255,
+            "ece": 0.0,
+            "n": 13041
+          },
+          "windows": 13041
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 4,
+          "false_alarms_per_day": 2.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 4.5,
+          "precision": 0.5556,
+          "recall": 0.625
+        },
+        "fusion alert": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 2.5,
+          "precision": 1.0,
+          "recall": 0.625
+        },
+        "fusion alert|review": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 2.5,
+          "precision": 1.0,
+          "recall": 0.625
+        },
+        "pipeline alert": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 2.5,
+          "precision": 1.0,
+          "recall": 0.625
+        },
+        "pipeline alert|review": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 2.5,
+          "precision": 1.0,
+          "recall": 0.625
+        },
+        "rules any": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 2.5,
+          "precision": 1.0,
+          "recall": 0.625
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 4,
+          "hostile_total": 8,
+          "per_day": 2.0,
+          "precision": 1.0,
+          "recall": 0.5
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.1284,
+          "n": 2850,
+          "positives": 8,
+          "roc_auc": 0.3918
+        },
+        "fusion": {
+          "average_precision": 0.6372,
+          "n": 2850,
+          "positives": 8,
+          "roc_auc": 0.9785
+        },
+        "iforest": {
+          "average_precision": 0.0202,
+          "n": 2850,
+          "positives": 8,
+          "roc_auc": 0.4754
+        },
+        "rules_any": {
+          "average_precision": 0.6261,
+          "n": 2850,
+          "positives": 8,
+          "roc_auc": 0.8125
+        },
+        "rules_high": {
+          "average_precision": 0.5014,
+          "n": 2850,
+          "positives": 8,
+          "roc_auc": 0.75
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 1
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 1
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 1
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 1
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 1
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 3
+          }
+        }
+      },
+      "test_days": 2,
+      "test_hostile_windows": 8,
+      "test_windows": 2850,
+      "train_scenarios": [
+        "fox",
+        "harrison",
+        "russellmitchell",
+        "santos",
+        "wardbeck",
+        "wheeler",
+        "wilson"
+      ]
+    },
+    "wardbeck": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 6.0,
+        "pipeline_fused_alerts_decision_alert": 6.0,
+        "pipeline_windows_alert_or_review": 6.0,
+        "suppressed_duplicates": 0,
+        "windows_flagged_before_fusion": 6.0
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0019,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0019,
+            "n": 1554
+          },
+          {
+            "fraction_hostile": 0.8333,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 1.0,
+            "n": 6
+          }
+        ],
+        "brier": 0.002552,
+        "ece": 0.0007,
+        "n": 1560
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 6,
+          "review": 0,
+          "suppress": 1554
+        },
+        "pipeline_rules_first": {
+          "alert": 6,
+          "review": 0,
+          "suppress": 1554
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:background": 1,
+        "alert:incident": 5
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.0896,
+          "iforest.missing": 0.088,
+          "iforest.score": 1.7495,
+          "log.dns_long_names": 0.3063,
+          "log.event_count": -0.2102,
+          "log.new_target": 0.2337,
+          "log.privileged_ops": 0.363,
+          "novelty.new_source_ip": 0.1663,
+          "peer.volume_z": -0.1046,
+          "rules.count": 1.0394,
+          "rules.high": 0.4625,
+          "rules.medium": 0.0,
+          "timing.off_hours": -0.1831,
+          "type.host": 0.0714,
+          "type.ip": 0.1841,
+          "type.user": -0.1983
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.09523809523809523,
+          "tau_review": 0.09523809523809523
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "fox",
+            "harrison",
+            "russellmitchell",
+            "santos",
+            "shaw",
+            "wheeler",
+            "wilson"
+          ],
+          "hostile_windows": 363,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0021,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0021,
+                "n": 13995
+              },
+              {
+                "fraction_hostile": 0.9911,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.9911,
+                "n": 336
+              }
+            ],
+            "brier": 0.002269,
+            "ece": 0.0,
+            "n": 14331
+          },
+          "windows": 14331
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 6.0,
+          "precision": 0.8333,
+          "recall": 0.625
+        },
+        "fusion alert": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 6.0,
+          "precision": 0.8333,
+          "recall": 0.625
+        },
+        "fusion alert|review": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 6.0,
+          "precision": 0.8333,
+          "recall": 0.625
+        },
+        "pipeline alert": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 6.0,
+          "precision": 0.8333,
+          "recall": 0.625
+        },
+        "pipeline alert|review": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 6.0,
+          "precision": 0.8333,
+          "recall": 0.625
+        },
+        "rules any": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 5,
+          "hostile_total": 8,
+          "per_day": 6.0,
+          "precision": 0.8333,
+          "recall": 0.625
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 4,
+          "hostile_total": 8,
+          "per_day": 4.0,
+          "precision": 1.0,
+          "recall": 0.5
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.1303,
+          "n": 1560,
+          "positives": 8,
+          "roc_auc": 0.4071
+        },
+        "fusion": {
+          "average_precision": 0.5412,
+          "n": 1560,
+          "positives": 8,
+          "roc_auc": 0.9683
+        },
+        "iforest": {
+          "average_precision": 0.1549,
+          "n": 1560,
+          "positives": 8,
+          "roc_auc": 0.6981
+        },
+        "rules_any": {
+          "average_precision": 0.5228,
+          "n": 1560,
+          "positives": 8,
+          "roc_auc": 0.8122
+        },
+        "rules_high": {
+          "average_precision": 0.5026,
+          "n": 1560,
+          "positives": 8,
+          "roc_auc": 0.75
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 8
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          }
+        }
+      },
+      "test_days": 1.0,
+      "test_hostile_windows": 8,
+      "test_windows": 1560,
+      "train_scenarios": [
+        "fox",
+        "harrison",
+        "russellmitchell",
+        "santos",
+        "shaw",
+        "wheeler",
+        "wilson"
+      ]
+    },
+    "wheeler": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 6.0,
+        "pipeline_fused_alerts_decision_alert": 6.0,
+        "pipeline_windows_alert_or_review": 10.0,
+        "suppressed_duplicates": 4,
+        "windows_flagged_before_fusion": 10.0
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0022,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0022,
+            "n": 1391
+          },
+          {
+            "fraction_hostile": 1.0,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 0.9855,
+            "n": 10
+          }
+        ],
+        "brier": 0.002121,
+        "ece": 0.0001,
+        "n": 1401
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 10,
+          "review": 0,
+          "suppress": 1391
+        },
+        "pipeline_rules_first": {
+          "alert": 10,
+          "review": 0,
+          "suppress": 1391
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:incident": 6
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.0285,
+          "iforest.missing": 0.0635,
+          "iforest.score": 2.0436,
+          "log.dns_long_names": 0.2916,
+          "log.event_count": -0.1751,
+          "log.new_target": 0.214,
+          "log.privileged_ops": 0.3327,
+          "novelty.new_source_ip": 0.1679,
+          "peer.volume_z": -0.1535,
+          "rules.count": 1.1225,
+          "rules.high": 0.4397,
+          "rules.medium": 0.0,
+          "timing.off_hours": -0.2436,
+          "type.host": 0.0642,
+          "type.ip": 0.1366,
+          "type.user": -0.1498
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.25,
+          "tau_review": 0.25
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "fox",
+            "harrison",
+            "russellmitchell",
+            "santos",
+            "shaw",
+            "wardbeck",
+            "wilson"
+          ],
+          "hostile_windows": 358,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0021,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0021,
+                "n": 14155
+              },
+              {
+                "fraction_hostile": 0.25,
+                "hi": 0.3,
+                "lo": 0.2,
+                "mean_confidence": 0.25,
+                "n": 4
+              },
+              {
+                "fraction_hostile": 0.9879,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.9879,
+                "n": 331
+              }
+            ],
+            "brier": 0.002381,
+            "ece": 0.0,
+            "n": 14490
+          },
+          "windows": 14490
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 10,
+          "hostile_total": 13,
+          "per_day": 10.0,
+          "precision": 1.0,
+          "recall": 0.7692
+        },
+        "fusion alert": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 10,
+          "hostile_total": 13,
+          "per_day": 10.0,
+          "precision": 1.0,
+          "recall": 0.7692
+        },
+        "fusion alert|review": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 10,
+          "hostile_total": 13,
+          "per_day": 10.0,
+          "precision": 1.0,
+          "recall": 0.7692
+        },
+        "pipeline alert": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 10,
+          "hostile_total": 13,
+          "per_day": 10.0,
+          "precision": 1.0,
+          "recall": 0.7692
+        },
+        "pipeline alert|review": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 10,
+          "hostile_total": 13,
+          "per_day": 10.0,
+          "precision": 1.0,
+          "recall": 0.7692
+        },
+        "rules any": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 10,
+          "hostile_total": 13,
+          "per_day": 10.0,
+          "precision": 1.0,
+          "recall": 0.7692
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 5,
+          "hostile_total": 13,
+          "per_day": 5.0,
+          "precision": 1.0,
+          "recall": 0.3846
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.3907,
+          "n": 1401,
+          "positives": 13,
+          "roc_auc": 0.5488
+        },
+        "fusion": {
+          "average_precision": 0.7933,
+          "n": 1401,
+          "positives": 13,
+          "roc_auc": 0.9465
+        },
+        "iforest": {
+          "average_precision": 0.3932,
+          "n": 1401,
+          "positives": 13,
+          "roc_auc": 0.6476
+        },
+        "rules_any": {
+          "average_precision": 0.7714,
+          "n": 1401,
+          "positives": 13,
+          "roc_auc": 0.8846
+        },
+        "rules_high": {
+          "average_precision": 0.3903,
+          "n": 1401,
+          "positives": 13,
+          "roc_auc": 0.6923
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 10,
+            "windows": 13
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 10,
+            "windows": 13
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 10,
+            "windows": 13
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 10,
+            "windows": 13
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 10,
+            "windows": 13
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 4
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 5
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 4
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 5
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 4
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 5
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 4
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 5
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 4
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 5,
+            "windows": 5
+          }
+        }
+      },
+      "test_days": 1.0,
+      "test_hostile_windows": 13,
+      "test_windows": 1401,
+      "train_scenarios": [
+        "fox",
+        "harrison",
+        "russellmitchell",
+        "santos",
+        "shaw",
+        "wardbeck",
+        "wilson"
+      ]
+    },
+    "wilson": {
+      "alert_volume_per_day": {
+        "pipeline_fused_alerts": 8.5,
+        "pipeline_fused_alerts_decision_alert": 8.5,
+        "pipeline_windows_alert_or_review": 11.0,
+        "suppressed_duplicates": 5,
+        "windows_flagged_before_fusion": 8.0
+      },
+      "calibration_on_test": {
+        "bins": [
+          {
+            "fraction_hostile": 0.0008,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_confidence": 0.0025,
+            "n": 3832
+          },
+          {
+            "fraction_hostile": 0.8333,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_confidence": 0.9904,
+            "n": 12
+          }
+        ],
+        "brier": 0.001299,
+        "ece": 0.0022,
+        "n": 3844
+      },
+      "decisions": {
+        "fusion": {
+          "alert": 22,
+          "review": 0,
+          "suppress": 3822
+        },
+        "pipeline_rules_first": {
+          "alert": 22,
+          "review": 0,
+          "suppress": 3822
+        }
+      },
+      "fused_alerts_by_decision_and_label": {
+        "alert:background": 11,
+        "alert:incident": 6
+      },
+      "model": {
+        "calibration_version": "cal-1.0.0",
+        "coefficients": {
+          "failure.http_error_rate": 0.0372,
+          "iforest.missing": 0.0583,
+          "iforest.score": 1.8675,
+          "log.dns_long_names": 0.2715,
+          "log.event_count": -0.176,
+          "log.new_target": 0.1901,
+          "log.privileged_ops": 0.348,
+          "novelty.new_source_ip": 0.1812,
+          "peer.volume_z": -0.1573,
+          "rules.count": 1.2398,
+          "rules.high": 0.428,
+          "rules.medium": 0.0,
+          "timing.off_hours": -0.1973,
+          "type.host": 0.0883,
+          "type.ip": 0.1399,
+          "type.user": -0.1592
+        },
+        "fusion_version": "fusion-1.0.0",
+        "inputs": [
+          "rules.high",
+          "rules.medium",
+          "rules.count",
+          "iforest.score",
+          "iforest.missing",
+          "log.event_count",
+          "peer.volume_z",
+          "novelty.new_source_ip",
+          "log.new_target",
+          "log.privileged_ops",
+          "failure.http_error_rate",
+          "timing.off_hours",
+          "log.dns_long_names",
+          "type.user",
+          "type.host",
+          "type.ip"
+        ],
+        "model": "logreg",
+        "thresholds": {
+          "alert_reachable": true,
+          "review_recall": 0.9,
+          "target_precision": 0.8,
+          "tau_alert": 0.018518518518518517,
+          "tau_review": 0.018518518518518517
+        },
+        "training": {
+          "calibration_scheme": "leave-one-scenario-out",
+          "folds": 7,
+          "groups": [
+            "fox",
+            "harrison",
+            "russellmitchell",
+            "santos",
+            "shaw",
+            "wardbeck",
+            "wheeler"
+          ],
+          "hostile_windows": 358,
+          "out_of_fold_reliability": {
+            "bins": [
+              {
+                "fraction_hostile": 0.0026,
+                "hi": 0.1,
+                "lo": 0.0,
+                "mean_confidence": 0.0026,
+                "n": 11717
+              },
+              {
+                "fraction_hostile": 0.9939,
+                "hi": 1.0,
+                "lo": 0.9,
+                "mean_confidence": 0.9939,
+                "n": 330
+              }
+            ],
+            "brier": 0.002636,
+            "ece": 0.0,
+            "n": 12047
+          },
+          "windows": 12047
+        }
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 6,
+          "false_alarms_per_day": 3.0,
+          "hostile_flagged": 10,
+          "hostile_total": 13,
+          "per_day": 8.0,
+          "precision": 0.625,
+          "recall": 0.7692
+        },
+        "fusion alert": {
+          "false_alarms": 11,
+          "false_alarms_per_day": 5.5,
+          "hostile_flagged": 11,
+          "hostile_total": 13,
+          "per_day": 11.0,
+          "precision": 0.5,
+          "recall": 0.8462
+        },
+        "fusion alert|review": {
+          "false_alarms": 11,
+          "false_alarms_per_day": 5.5,
+          "hostile_flagged": 11,
+          "hostile_total": 13,
+          "per_day": 11.0,
+          "precision": 0.5,
+          "recall": 0.8462
+        },
+        "pipeline alert": {
+          "false_alarms": 11,
+          "false_alarms_per_day": 5.5,
+          "hostile_flagged": 11,
+          "hostile_total": 13,
+          "per_day": 11.0,
+          "precision": 0.5,
+          "recall": 0.8462
+        },
+        "pipeline alert|review": {
+          "false_alarms": 11,
+          "false_alarms_per_day": 5.5,
+          "hostile_flagged": 11,
+          "hostile_total": 13,
+          "per_day": 11.0,
+          "precision": 0.5,
+          "recall": 0.8462
+        },
+        "rules any": {
+          "false_alarms": 2,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 9,
+          "hostile_total": 13,
+          "per_day": 5.5,
+          "precision": 0.8182,
+          "recall": 0.6923
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 3,
+          "hostile_total": 13,
+          "per_day": 1.5,
+          "precision": 1.0,
+          "recall": 0.2308
+        }
+      },
+      "ranking": {
+        "event_count": {
+          "average_precision": 0.4649,
+          "n": 3844,
+          "positives": 13,
+          "roc_auc": 0.6432
+        },
+        "fusion": {
+          "average_precision": 0.6811,
+          "n": 3844,
+          "positives": 13,
+          "roc_auc": 0.9683
+        },
+        "iforest": {
+          "average_precision": 0.3913,
+          "n": 3844,
+          "positives": 13,
+          "roc_auc": 0.8198
+        },
+        "rules_any": {
+          "average_precision": 0.5675,
+          "n": 3844,
+          "positives": 13,
+          "roc_auc": 0.8459
+        },
+        "rules_high": {
+          "average_precision": 0.2334,
+          "n": 3844,
+          "positives": 13,
+          "roc_auc": 0.6154
+        }
+      },
+      "recall_by_class": {
+        "before_fusion": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 10,
+            "windows": 13
+          }
+        },
+        "fusion_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 13
+          }
+        },
+        "fusion_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 13
+          }
+        },
+        "pipeline_alert": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 13
+          }
+        },
+        "pipeline_alert_or_review": {
+          "exfiltration": null,
+          "incident": {
+            "detected": true,
+            "flagged": 11,
+            "windows": 13
+          }
+        }
+      },
+      "recall_by_stage": {
+        "before_fusion": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 6,
+            "windows": 7
+          }
+        },
+        "fusion_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 6,
+            "windows": 7
+          }
+        },
+        "fusion_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 6,
+            "windows": 7
+          }
+        },
+        "pipeline_alert": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 6,
+            "windows": 7
+          }
+        },
+        "pipeline_alert_or_review": {
+          "discovery": {
+            "detected": true,
+            "flagged": 1,
+            "windows": 2
+          },
+          "entry": {
+            "detected": true,
+            "flagged": 2,
+            "windows": 2
+          },
+          "privilege": {
+            "detected": true,
+            "flagged": 3,
+            "windows": 3
+          },
+          "web_attack": {
+            "detected": true,
+            "flagged": 6,
+            "windows": 7
+          }
+        }
+      },
+      "test_days": 2,
+      "test_hostile_windows": 13,
+      "test_windows": 3844,
+      "train_scenarios": [
+        "fox",
+        "harrison",
+        "russellmitchell",
+        "santos",
+        "shaw",
+        "wardbeck",
+        "wheeler"
+      ]
+    }
+  },
+  "model": "logreg",
+  "pooled": {
+    "development": {
+      "alerts_per_day": {
+        "pipeline_fused_alerts": 8.33,
+        "pipeline_fused_alerts_decision_alert": 4.67,
+        "pipeline_windows_alert_or_review": 66.0,
+        "windows_flagged_before_fusion": 61.33
+      },
+      "brier_weighted": 0.003334,
+      "ece_weighted": 0.0018,
+      "folds": 2,
+      "folds_where_fusion_ap_beats_rules_any": 2,
+      "median_average_precision": {
+        "event_count": 0.3677,
+        "fusion": 0.9801,
+        "iforest": 0.0983,
+        "rules_any": 0.9755,
+        "rules_high": 0.9706
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 3,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 181,
+          "hostile_total": 191,
+          "precision": 0.9837,
+          "recall": 0.9476
+        },
+        "fusion alert": {
+          "false_alarms": 3,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 181,
+          "hostile_total": 191,
+          "precision": 0.9837,
+          "recall": 0.9476
+        },
+        "fusion alert|review": {
+          "false_alarms": 16,
+          "false_alarms_per_day": 5.33,
+          "hostile_flagged": 182,
+          "hostile_total": 191,
+          "precision": 0.9192,
+          "recall": 0.9529
+        },
+        "pipeline alert": {
+          "false_alarms": 3,
+          "false_alarms_per_day": 1.0,
+          "hostile_flagged": 181,
+          "hostile_total": 191,
+          "precision": 0.9837,
+          "recall": 0.9476
+        },
+        "pipeline alert|review": {
+          "false_alarms": 16,
+          "false_alarms_per_day": 5.33,
+          "hostile_flagged": 182,
+          "hostile_total": 191,
+          "precision": 0.9192,
+          "recall": 0.9529
+        },
+        "rules any": {
+          "false_alarms": 1,
+          "false_alarms_per_day": 0.33,
+          "hostile_flagged": 181,
+          "hostile_total": 191,
+          "precision": 0.9945,
+          "recall": 0.9476
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 175,
+          "hostile_total": 191,
+          "precision": 1.0,
+          "recall": 0.9162
+        }
+      },
+      "pipeline_stages_detected_alert_or_review": {
+        "discovery": "2/2",
+        "entry": "2/2",
+        "privilege": "2/2",
+        "web_attack": "2/2"
+      },
+      "suppressed_duplicates": 173,
+      "test_days": 3.0
+    },
+    "held-out": {
+      "alerts_per_day": {
+        "pipeline_fused_alerts": 6.38,
+        "pipeline_fused_alerts_decision_alert": 6.38,
+        "pipeline_windows_alert_or_review": 22.25,
+        "windows_flagged_before_fusion": 21.12
+      },
+      "brier_weighted": 0.002105,
+      "ece_weighted": 0.0019,
+      "folds": 6,
+      "folds_where_fusion_ap_beats_rules_any": 6,
+      "median_average_precision": {
+        "event_count": 0.1986,
+        "fusion": 0.6811,
+        "iforest": 0.1549,
+        "rules_any": 0.6261,
+        "rules_high": 0.5014
+      },
+      "operating_points": {
+        "before_fusion: rules any | iforest>=0.999": {
+          "false_alarms": 12,
+          "false_alarms_per_day": 1.5,
+          "hostile_flagged": 157,
+          "hostile_total": 180,
+          "precision": 0.929,
+          "recall": 0.8722
+        },
+        "fusion alert": {
+          "false_alarms": 20,
+          "false_alarms_per_day": 2.5,
+          "hostile_flagged": 158,
+          "hostile_total": 180,
+          "precision": 0.8876,
+          "recall": 0.8778
+        },
+        "fusion alert|review": {
+          "false_alarms": 20,
+          "false_alarms_per_day": 2.5,
+          "hostile_flagged": 158,
+          "hostile_total": 180,
+          "precision": 0.8876,
+          "recall": 0.8778
+        },
+        "pipeline alert": {
+          "false_alarms": 20,
+          "false_alarms_per_day": 2.5,
+          "hostile_flagged": 158,
+          "hostile_total": 180,
+          "precision": 0.8876,
+          "recall": 0.8778
+        },
+        "pipeline alert|review": {
+          "false_alarms": 20,
+          "false_alarms_per_day": 2.5,
+          "hostile_flagged": 158,
+          "hostile_total": 180,
+          "precision": 0.8876,
+          "recall": 0.8778
+        },
+        "rules any": {
+          "false_alarms": 3,
+          "false_alarms_per_day": 0.38,
+          "hostile_flagged": 156,
+          "hostile_total": 180,
+          "precision": 0.9811,
+          "recall": 0.8667
+        },
+        "rules high": {
+          "false_alarms": 0,
+          "false_alarms_per_day": 0.0,
+          "hostile_flagged": 135,
+          "hostile_total": 180,
+          "precision": 1.0,
+          "recall": 0.75
+        }
+      },
+      "pipeline_stages_detected_alert_or_review": {
+        "discovery": "5/6",
+        "entry": "6/6",
+        "privilege": "6/6",
+        "web_attack": "6/6"
+      },
+      "suppressed_duplicates": 127,
+      "test_days": 8.0
+    }
+  },
+  "protocol": "leave-one-scenario-out over the listed scenarios; fusion fit on the others, test scored once",
+  "scenarios": [
+    "russellmitchell",
+    "fox",
+    "harrison",
+    "santos",
+    "shaw",
+    "wardbeck",
+    "wheeler",
+    "wilson"
+  ],
+  "seconds": 4.9,
+  "suppression_seconds": 1800,
+  "variant": "asis"
+}

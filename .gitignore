@@ -47,3 +47,6 @@ htmlcov/
 
 # Docker / Logs
 *.log
+
+# Downloaded third-party datasets (large, licensed; never committed)
+data/external/

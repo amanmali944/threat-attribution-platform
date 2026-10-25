@@ -1,0 +1,374 @@
+{
+  "baselines": {
+    "event_count_only": {
+      "average_precision": 0.0284,
+      "n": 15702,
+      "positives": 21,
+      "roc_auc": 0.9083
+    },
+    "random_scoring_expected_average_precision": 0.0013
+  },
+  "data": {
+    "first_incident_window": "2025-04-29T05:30:00Z",
+    "test_days": 1.809,
+    "test_incident_windows": 21,
+    "test_unknown_windows": 50,
+    "test_windows": 15752,
+    "train_windows": 11889,
+    "validation_windows": 581
+  },
+  "dataset": "web-server-log-dataset/organization-y/auth",
+  "evaluated_at": "2026-10-21T08:14:27Z",
+  "high_rules_or_iforest_0999": {
+    "alerts_on_unknown_windows": 10,
+    "alerts_per_day": 61.9,
+    "false_alarm_windows": 87,
+    "false_alarms_per_day": 48.1,
+    "first_flagged_incident_window": "2025-04-29T05:30:00Z",
+    "incident_detected": true,
+    "incident_windows_flagged": 15,
+    "incident_windows_total": 21,
+    "latency_minutes_from_first_incident_window": 5.0,
+    "precision": 0.1471,
+    "recall": 0.7143
+  },
+  "isolation_forest": {
+    "metadata": {
+      "feature_set_version": "fs-1.1.0",
+      "model_version": "iforest-1.0.0",
+      "params": {
+        "max_samples": 256,
+        "min_train_windows": 20,
+        "n_estimators": 200,
+        "random_state": 42
+      },
+      "types": {
+        "host": {
+          "n_reference": 28,
+          "n_train": 24
+        },
+        "ip": {
+          "n_reference": 2247,
+          "n_train": 1921
+        },
+        "user": {
+          "n_reference": 10195,
+          "n_train": 9944
+        }
+      }
+    },
+    "operating_points": {
+      "0.99": {
+        "alerts_on_unknown_windows": 3,
+        "alerts_per_day": 118.8,
+        "false_alarm_windows": 205,
+        "false_alarms_per_day": 113.3,
+        "first_flagged_incident_window": "2025-04-29T06:00:00Z",
+        "incident_detected": true,
+        "incident_windows_flagged": 7,
+        "incident_windows_total": 21,
+        "latency_minutes_from_first_incident_window": 35.0,
+        "precision": 0.033,
+        "recall": 0.3333
+      },
+      "0.999": {
+        "alerts_on_unknown_windows": 1,
+        "alerts_per_day": 7.2,
+        "false_alarm_windows": 9,
+        "false_alarms_per_day": 5.0,
+        "first_flagged_incident_window": "2025-04-29T06:50:00Z",
+        "incident_detected": true,
+        "incident_windows_flagged": 3,
+        "incident_windows_total": 21,
+        "latency_minutes_from_first_incident_window": 85.0,
+        "precision": 0.25,
+        "recall": 0.1429
+      }
+    },
+    "ranking": {
+      "average_precision": 0.0829,
+      "n": 15702,
+      "positives": 21,
+      "roc_auc": 0.8732
+    },
+    "ranking_by_entity_type": {
+      "host": {
+        "average_precision": 0.7917,
+        "n": 49,
+        "positives": 6,
+        "roc_auc": 0.9806
+      },
+      "ip": {
+        "average_precision": 0.0019,
+        "n": 3473,
+        "positives": 5,
+        "roc_auc": 0.5934
+      },
+      "user": {
+        "average_precision": 0.1981,
+        "n": 12180,
+        "positives": 10,
+        "roc_auc": 0.9917
+      }
+    },
+    "test_windows_without_model": 0,
+    "top10_test_windows": [
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "timing.interarrival_cv",
+          "diversity.distinct_accounts_from_ip",
+          "failure.max_consecutive_failures"
+        ],
+        "score": 1.0,
+        "window_start": "2025-04-29T15:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "background",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "volume.event_count",
+          "failure.max_consecutive_failures"
+        ],
+        "score": 0.999902,
+        "window_start": "2025-04-30T07:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "background",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "volume.event_count",
+          "failure.max_consecutive_failures"
+        ],
+        "score": 0.999902,
+        "window_start": "2025-04-30T08:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "incident",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "volume.event_count",
+          "failure.max_consecutive_failures"
+        ],
+        "score": 0.999608,
+        "window_start": "2025-04-29T06:50:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "incident",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "peer.volume_zscore",
+          "volume.event_count"
+        ],
+        "score": 0.999608,
+        "window_start": "2025-04-29T07:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "background",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "peer.volume_zscore",
+          "volume.event_count"
+        ],
+        "score": 0.999608,
+        "window_start": "2025-04-30T20:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "background",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "volume.event_count",
+          "failure.max_consecutive_failures"
+        ],
+        "score": 0.99951,
+        "window_start": "2025-04-30T00:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "background",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "peer.volume_zscore",
+          "volume.event_count"
+        ],
+        "score": 0.99951,
+        "window_start": "2025-04-30T19:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "background",
+        "most_unusual": [
+          "privilege.privileged_ops",
+          "volume.event_count",
+          "failure.max_consecutive_failures"
+        ],
+        "score": 0.999411,
+        "window_start": "2025-04-30T21:00:00Z"
+      },
+      {
+        "entity_type": "user",
+        "label": "background",
+        "most_unusual": [
+          "timing.interarrival_cv",
+          "failure.max_consecutive_failures",
+          "volume.login_count"
+        ],
+        "score": 0.999215,
+        "window_start": "2025-04-30T07:05:00Z"
+      }
+    ]
+  },
+  "limits": [
+    "ONE incident: every recall figure is a single observation, not an estimate",
+    "incident shape was seen while defining labels and adding fs-1.1.0 login counts: optimistic",
+    "incident window assumes the syslog clock is UTC",
+    "unknown windows excluded; alerts on them reported separately",
+    "Isolation Forest ECDF reference includes its own training windows (in-sample), so test false alarms run above the nominal 1% / 0.1%"
+  ],
+  "protocol": "zero-shot: calibrate/train on background of train+validation, score test once",
+  "rules": {
+    "any_rule": {
+      "alerts_on_unknown_windows": 11,
+      "alerts_per_day": 623.5,
+      "false_alarm_windows": 1102,
+      "false_alarms_per_day": 609.2,
+      "first_flagged_incident_window": "2025-04-29T05:30:00Z",
+      "incident_detected": true,
+      "incident_windows_flagged": 15,
+      "incident_windows_total": 21,
+      "latency_minutes_from_first_incident_window": 5.0,
+      "precision": 0.0134,
+      "recall": 0.7143
+    },
+    "calibration": {
+      "background_windows_by_type": {
+        "host": 28,
+        "ip": 2247,
+        "user": 10195
+      }
+    },
+    "high_severity_rules": {
+      "alerts_on_unknown_windows": 9,
+      "alerts_per_day": 59.1,
+      "false_alarm_windows": 84,
+      "false_alarms_per_day": 46.4,
+      "first_flagged_incident_window": "2025-04-29T05:30:00Z",
+      "incident_detected": true,
+      "incident_windows_flagged": 14,
+      "incident_windows_total": 21,
+      "latency_minutes_from_first_incident_window": 5.0,
+      "precision": 0.1429,
+      "recall": 0.6667
+    },
+    "per_rule": {
+      "RULE-APP-001": {
+        "severity": "low",
+        "test_fires": {
+          "background": 0,
+          "incident": 0,
+          "unknown": 0
+        },
+        "title": "Web error burst (scanning)",
+        "validation_fires": 0
+      },
+      "RULE-DB-001": {
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "incident": 0,
+          "unknown": 0
+        },
+        "title": "Bulk data read",
+        "validation_fires": 0
+      },
+      "RULE-IDN-001": {
+        "severity": "low",
+        "test_fires": {
+          "background": 1002,
+          "incident": 10,
+          "unknown": 5
+        },
+        "title": "Brute-force login burst",
+        "validation_fires": 98
+      },
+      "RULE-IDN-002": {
+        "severity": "medium",
+        "test_fires": {
+          "background": 301,
+          "incident": 0,
+          "unknown": 0
+        },
+        "title": "Password spray from one source",
+        "validation_fires": 2
+      },
+      "RULE-IDN-003": {
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "incident": 5,
+          "unknown": 9
+        },
+        "title": "Successful login from a never-seen source",
+        "validation_fires": 0
+      },
+      "RULE-IDN-004": {
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "incident": 0,
+          "unknown": 0
+        },
+        "title": "Successful login after repeated failures",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-001": {
+        "severity": "high",
+        "test_fires": {
+          "background": 84,
+          "incident": 11,
+          "unknown": 1
+        },
+        "title": "Privileged command burst",
+        "validation_fires": 8
+      },
+      "RULE-PRIV-002": {
+        "severity": "medium",
+        "test_fires": {
+          "background": 0,
+          "incident": 0,
+          "unknown": 0
+        },
+        "title": "Role or privilege change",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-003": {
+        "severity": "medium",
+        "test_fires": {
+          "background": 5,
+          "incident": 2,
+          "unknown": 0
+        },
+        "title": "Privileged activity at an unusual hour",
+        "validation_fires": 1
+      }
+    },
+    "ruleset": "rules-1.0.0",
+    "thresholds": {
+      "RULE-DB-001": {
+        "user": 10000
+      },
+      "RULE-PRIV-001": {
+        "host": 19.0,
+        "user": 19.0
+      }
+    }
+  },
+  "seconds": 2.2
+}

@@ -9,7 +9,7 @@ import { AuthContext, type AuthState } from './auth-context-definition';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(() => {
-    const storedToken = localStorage.getItem('access_token');
+    const storedToken = localStorage.getItem('soc_session_token') || localStorage.getItem('access_token');
     const storedUser = localStorage.getItem('user');
     return {
       token: storedToken,
@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (cancelled) return;
+        localStorage.removeItem('soc_session_token');
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         setState({
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loginResponse = await authApi.login({ username, password });
     const tokenData: TokenResponse = loginResponse.data;
 
+    localStorage.setItem('soc_session_token', tokenData.access_token);
     localStorage.setItem('access_token', tokenData.access_token);
 
     // Fetch full user profile
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    localStorage.removeItem('soc_session_token');
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     setState({

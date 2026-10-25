@@ -28,6 +28,15 @@ def create_alert(alert_in: AlertCreate, db: Session = Depends(get_db)):
         severity=alert_in.severity,
         status=alert_in.status,
         observed_at=alert_in.observed_at,
+        detector=alert_in.detector,
+        detector_version=alert_in.detector_version,
+        technique=alert_in.technique,
+        technique_id=alert_in.technique_id,
+        entity_id=alert_in.entity_id,
+        score=alert_in.score,
+        confidence=alert_in.confidence,
+        decision=alert_in.decision,
+        evidence=alert_in.evidence if alert_in.evidence is not None else [],
     )
 
     if alert_in.event_ids:
@@ -56,14 +65,17 @@ def list_alerts(
 
     target_rule = detector or rule_id
     if target_rule:
-        query = query.filter(Alert.rule_id == target_rule)
+        query = query.filter((Alert.rule_id == target_rule) | (Alert.detector == target_rule))
     if status:
         query = query.filter(Alert.status == status)
     if severity:
         query = query.filter(Alert.severity == severity)
     if technique:
         query = query.filter(
-            Alert.title.ilike(f"%{technique}%") | Alert.description.ilike(f"%{technique}%")
+            (Alert.technique == technique)
+            | (Alert.technique_id == technique)
+            | Alert.title.ilike(f"%{technique}%")
+            | Alert.description.ilike(f"%{technique}%")
         )
 
     total_in_db = query.count()
@@ -76,7 +88,7 @@ def list_alerts(
             f_tenant = fa.get("tenant_id", "")
             if f_tenant != tenant_id and tenant_id not in ["tenant-default-001", "tenant-01"]:
                 continue
-            if target_rule and fa.get("rule_id") != target_rule:
+            if target_rule and fa.get("rule_id") != target_rule and fa.get("detector") != target_rule:
                 continue
             if status and fa.get("status") != status:
                 continue
@@ -85,7 +97,14 @@ def list_alerts(
             if technique:
                 title = fa.get("title", "")
                 desc = fa.get("description", "")
-                if technique.lower() not in title.lower() and technique.lower() not in desc.lower():
+                t_val = fa.get("technique", "")
+                t_id = fa.get("technique_id", "")
+                if (
+                    technique.lower() not in title.lower()
+                    and technique.lower() not in desc.lower()
+                    and technique.lower() != t_val.lower()
+                    and technique.lower() != t_id.lower()
+                ):
                     continue
 
             obs_dt = parse_datetime(fa.get("observed_at"))
@@ -101,6 +120,15 @@ def list_alerts(
                     severity=fa.get("severity", "medium"),
                     status=fa.get("status", "open"),
                     observed_at=obs_dt,
+                    detector=fa.get("detector"),
+                    detector_version=fa.get("detector_version"),
+                    technique=fa.get("technique"),
+                    technique_id=fa.get("technique_id"),
+                    entity_id=fa.get("entity_id"),
+                    score=fa.get("score"),
+                    confidence=fa.get("confidence"),
+                    decision=fa.get("decision"),
+                    evidence=fa.get("evidence", []),
                     created_at=created_dt,
                 )
             )
@@ -141,6 +169,15 @@ def get_alert_detail(
             severity=alert.severity,
             status=alert.status,
             observed_at=alert.observed_at,
+            detector=alert.detector,
+            detector_version=alert.detector_version,
+            technique=alert.technique,
+            technique_id=alert.technique_id,
+            entity_id=alert.entity_id,
+            score=alert.score,
+            confidence=alert.confidence,
+            decision=alert.decision,
+            evidence=alert.evidence,
             created_at=alert.created_at,
             evidence_refs=evidence_refs,
             event_ids=evidence_refs,
@@ -164,6 +201,15 @@ def get_alert_detail(
                 severity=fa.get("severity", "medium"),
                 status=fa.get("status", "open"),
                 observed_at=obs_dt,
+                detector=fa.get("detector"),
+                detector_version=fa.get("detector_version"),
+                technique=fa.get("technique"),
+                technique_id=fa.get("technique_id"),
+                entity_id=fa.get("entity_id"),
+                score=fa.get("score"),
+                confidence=fa.get("confidence"),
+                decision=fa.get("decision"),
+                evidence=fa.get("evidence", []),
                 created_at=created_dt,
                 evidence_refs=ev_refs,
                 event_ids=ev_refs,

@@ -1,0 +1,256 @@
+# Detection & Intelligence Build Plan — Developer A
+
+**Owner:** Developer A (Detection & Intelligence)  
+**Branch:** `predictions`  
+**Contract:** `docs/DETECTION_CONTRACT.md`  
+**Last Updated:** October 21, 2026
+
+## 1. Goal
+
+Build the analytical brain of the platform so that it answers the product sentence:
+
+> Ingest security telemetry from every layer, decide which activity is hostile, and return a single causal account of each incident: where it entered, what path it took, what it reached, and how confident the system is in that account.
+
+Each phase below maps to one part of that sentence:
+
+| Product sentence | Phases |
+| :--- | :--- |
+| "from every layer" | 1 (cross-layer corpus), 2 (entity resolution) |
+| "decide which activity is hostile" | 2 (features), 3 (detectors), 4 (fusion & calibration) |
+| "a single … account of each incident" | 5 (correlation) |
+| "where it entered, what path it took, what it reached" | 6 (attribution) |
+| "how confident the system is" | 4 (calibration), 6 (account confidence), 7 (risk) |
+
+And to the three failures in the problem statement:
+
+| Failure | Addressed by |
+| :--- | :--- |
+| Visibility fragmentation | Phase 2 — cross-layer entity resolution |
+| Alert fatigue | Phase 4 — fusion, deduplication, suppression, abstention; Phase 5 — consolidation |
+| Absent attribution | Phase 6 — entry point, path, reach, dwell time |
+
+**Target buyer for v1:** mid-market SOC (2–5 analysts). Optimise for fewer, consolidated, prioritised, explainable alerts — measured as alerts per analyst per day.
+
+---
+
+## 2. Current Starting Point (October 09, 2026)
+
+- `backend/app/services/` is empty. No detection, correlation, attribution or risk logic exists.
+- `incidents.py` computes a placeholder `patient_zero` (earliest `first_seen`) and `blast_radius` (entity count).
+- `evaluation.py` returns hard-coded metrics; `DashboardPage.tsx` shows hard-coded confidence and blast radius.
+- Fixtures contain 4 events, 3 alerts, 2 incidents — no application or database layer events, no ground truth.
+- Contract change requests CR-01 … CR-07 sent to Developer B (see `DETECTION_CONTRACT.md` §12).
+
+---
+
+## 3. Module Layout
+
+```
+backend/app/services/
+  detection/
+    __init__.py
+    resolve.py          # Phase 2 — entity resolution → Enriched Event
+    features.py         # Phase 2 — Feature Vector
+    rules.py            # Phase 3 — rules engine
+    anomaly.py          # Phase 3 — Isolation Forest
+    sequence.py         # Phase 3 — sequence detector
+    envelope.py         # Phase 4 — Alert Envelope builder / validation
+    fusion.py           # Phase 4 — fusion, calibration, abstention, suppression
+  attribution/
+    __init__.py
+    correlation.py      # Phase 5 — Incident Object
+    graph.py            # Phase 6 — Attribution Result
+    risk.py             # Phase 7 — Risk Score
+  pipeline.py           # Phase 9 — end-to-end runner + platform delivery
+scripts/
+  generate_corpus.py    # Phase 1
+  evaluate.py           # Phase 8
+data/
+  corpus/               # Phase 1 — scenarios + ground truth
+  evaluation/           # Phase 8 — evaluation_results.json, calibration artifact
+backend/tests/detection/  # tests for every phase
+```
+
+Directory names follow `docs/ARCHITECTURE.md` (`services/detection/`, `services/attribution/`).
+
+---
+
+## 4. Phases
+
+### Phase 0 — Setup & Contract Freeze
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | Create branch `predictions`; write `DETECTION_CONTRACT.md` and this plan; commit playbook PDF; raise CR-01 … CR-07 with Developer B; request approval for `numpy`, `scikit-learn`, `networkx` |
+| **Outputs** | `docs/DETECTION_CONTRACT.md`, `docs/DETECTION_PLAN.md` |
+| **Depends on** | Nothing |
+| **Done when** | Developer B acknowledges the contract; dependencies approved |
+
+### Phase 1 — Real-Data Corpus & Ground Truth (revised Oct 21, 2026)
+
+The original plan was a seeded synthetic generator. That route was dropped; v1 uses **small slices of published datasets** converted to the canonical event format by adapters.
+
+| Item | Detail |
+| :--- | :--- |
+| **Approach** | One adapter per dataset in `scripts/adapters/`. Raw and derived data live in `data/external/` (git-ignored; some licences are non-commercial / share-alike). Labels go in a **sidecar** file, never inside events. Every run records dataset version, file checksums and rules checksum |
+| **Steps** | **1a** Web Server Log Dataset, Org X (2.1 MB, MIT): plumbing + application layer — **done** · **1b** event→window labels and time-ordered baseline / train / validation / test splits · **1c** Org Y (SSH `auth.log` + five web vhost logs fetched by range request, ~5 MB; real brute force, successful logins, post-compromise sudo) — **done** · **1d** AIT-LDS v2.0 `russellmitchell` slice: multi-source, multi-step attack with per-line step labels |
+| **Layer coverage** | identity, application, network, endpoint (partly). **No database or cloud layer** — no public labelled data exists; both are reported as unvalidated |
+| **Outputs** | `scripts/adapters/*.py`, derived data under `data/external/**/derived/` (not committed), small committed fixtures only |
+| **Acceptance tests** | Every source line accounted for (`events + unparsed == lines`) · all events pass `validate_event` · byte-identical output on rerun · ground-truth checksum recorded · mutation-checked tests |
+| **Known limits** | Org X has a single client IP and no users, so it cannot test entity-level detection; labels from rule sets measure agreement with the rules, not independent truth |
+| **Depends on** | Contract §1, §10 |
+
+### Phase 2 — Entity Resolution & Feature Engine
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | Deterministic entity IDs (contract §2.1); role derivation (actor user / IP / device, target, criticality); sliding windows per entity; compute feature catalogue `fs-1.0.0`; maintain per-entity history for novelty and peer-cohort baselines |
+| **Outputs** | `detection/resolve.py`, `detection/features.py`, `data/fixtures/expected_features.json` |
+| **Acceptance tests** | Same input replay ⇒ identical features · window length configurable · events missing required payload keys are skipped and counted, not crashed on · hand-checked expected values for selected events |
+| **Depends on** | Phase 1 |
+
+### Phase 3 — Detectors
+
+| Step | Detail |
+| :--- | :--- |
+| **3a Rules** | Versioned rule set (`rules-1.0.0`): brute force, password spray, login from new IP/country after failures, privilege change outside change window, privileged/bulk DB read, remote session fan-out, off-hours admin activity. Highest precision, built first |
+| **3b Isolation Forest** | Train on normal-only windows, score all windows; separate `fit` / `score`; persisted model with version; score normalised to `[0,1]` |
+| **3c Sequence** | Markov / n-gram model of per-entity action sequences; flags low-probability transitions (e.g. login → privilege change → bulk SELECT). Kept only if it detects cases rules + Isolation Forest miss |
+| **Outputs** | `detection/rules.py`, `detection/anomaly.py`, `detection/sequence.py` — all emitting the Alert Envelope |
+| **Acceptance tests** | Every rule has one passing and one failing test case · deterministic preprocessing · per-detector precision / recall by attack class · documented comparison: rules vs Isolation Forest vs sequence |
+| **Depends on** | Phase 2 |
+
+### Phase 4 — Alert Envelope, Fusion, Calibration, Alert-Fatigue Controls
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | Envelope builder + validation; group alerts per entity / overlapping window; combine detector scores; calibrate on a held-out split (Platt or isotonic); thresholds τ_alert / τ_review chosen on validation data; decisions `alert` / `review` / `suppress`; deduplicate repeats within a suppression window |
+| **Outputs** | `detection/envelope.py`, `detection/fusion.py`, `data/evaluation/calibration.json`, reliability diagram |
+| **Acceptance tests** | Fusion produces a reliability / calibration artefact (ECE, Brier) · uncertain cases are routed to `review` instead of forced · alerts per analyst per day reported before vs after fusion |
+| **Depends on** | Phase 3 |
+
+### Phase 5 — Correlation into Incidents
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | Link fused alerts sharing resolved entities within a time horizon, respecting attack-stage order; merge into one Incident Object; derive title, severity, layers, stages |
+| **Outputs** | `attribution/correlation.py`, `data/fixtures/expected_incidents.json` |
+| **Acceptance tests** | Each known attack scenario becomes exactly one consolidated incident · unrelated benign noise does not merge into it · consolidation ratio reported |
+| **Depends on** | Phase 4 |
+
+### Phase 6 — Attribution (centre of the product)
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | Per-incident directed graph in NetworkX (nodes = resolved entities, edges = observed actions with timestamps and anomaly scores); entry point = earliest anomalous root; time-respecting attack path to each reached asset; forward reachability for blast radius; dwell time; account confidence; plain-language explanation; graph serialised in the platform's `GraphNode` / `GraphEdge` shape |
+| **Outputs** | `attribution/graph.py`, `data/fixtures/expected_attribution.json` |
+| **Acceptance tests** | Entry point matches ground truth for all four scenarios · path and reached assets checked against ground truth · every path edge cites a real event ID |
+| **Depends on** | Phase 5 |
+| **Not doing** | Neo4j, graph neural networks, threat-actor naming |
+
+### Phase 7 — Explainable Risk Scoring
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | Time-decayed score per entity and per incident (contract §8); criticality-weighted; contributors list retained |
+| **Outputs** | `attribution/risk.py` |
+| **Acceptance tests** | Every non-zero score has at least one contributor · score decays with age (half-life test) · higher-criticality targets rank higher for equal confidence |
+| **Depends on** | Phase 6 |
+
+### Phase 8 — Evaluation Harness
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | One command runs corpus → features → detectors → fusion → incidents → attribution → risk and writes `evaluation_results.json` (contract §9) |
+| **Metrics** | Precision / recall / F1 per attack class and per detector · calibration (ECE, Brier, reliability bins) · abstention rate · alerts per analyst per day · incident consolidation ratio · entry-point accuracy, path precision / recall, reached-asset Jaccard · detection latency. **No accuracy headline.** |
+| **Outputs** | `scripts/evaluate.py`, `data/evaluation/evaluation_results.json` |
+| **Acceptance tests** | Same seed ⇒ same numbers · evaluated on a seed not used for training / calibration |
+| **Depends on** | Phases 1–7 |
+
+### Phase 9 — Integration & Handoff
+
+| Item | Detail |
+| :--- | :--- |
+| **Tasks** | Pipeline runner posts alerts, incidents and attributions through the platform API; end-to-end test from corpus to API responses; handoff message (playbook §20); Developer A section in `CURRENT_STATUS.md` |
+| **Outputs** | `services/pipeline.py`, `backend/tests/test_e2e_pipeline.py` |
+| **Acceptance tests** | End-to-end fixture scenario passes after merge · Developer B can integrate using only contract + fixtures |
+| **Depends on** | Phases 1–8, Developer B CR-01 … CR-07 merged |
+
+---
+
+## 4A. ML Strategy — how the detector is actually "ML"
+
+Rules give precision on patterns we already know. ML is what generalises to variants and to behaviour no rule was written for, and the fusion model is the component that *decides*. Every model reads the same `fs-1.0.0` Feature Vectors; none gets a private feature pipeline.
+
+| # | Layer | Model | Learns from | Why it earns its place | Output |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Baseline-relative features | novelty, off-hours, peer z-scores (Phase 2, done) | a normal period | Turns raw counts into "how unusual *for this entity*", so models generalise across busy and quiet users | Feature Vector |
+| 2 | Anomaly detector | Isolation Forest, one model per subject type (user / ip / host) | normal windows only — no attack labels | Finds behaviour with no rule. Types get separate models because their feature distributions differ | score in [0,1] = ECDF rank against normal training scores ("rarer than 99% of normal windows") |
+| 3 | Sequence model | n-gram / first-order Markov over per-entity tokens `layer:event_type:outcome`, add-k smoothing | normal sequences | Catches unusual *order across layers* (login → role change → bulk read) that single-window features cannot see | score = percentile of mean negative log-likelihood vs normal sequences |
+| 4 | **Fusion (the decision model)** | logistic regression (interpretable) with HistGradientBoosting as challenger, over rule hits + IF score + sequence score + a few key features | labelled windows | Learns how far to trust each detector in context. The only place attack labels are needed, with ≤ ~15 inputs to limit overfitting | p(hostile) |
+| 5 | Calibration | isotonic (Platt as fallback) on a held-out split | held-out data | Makes confidence mean what it says; τ_alert / τ_review chosen on validation data for a target precision | `confidence`, `decision` (alert / review / suppress) |
+
+**Explainability.** Logistic regression contribution = coefficient × standardised feature value; Isolation Forest explanation = features that deviate most from the normal distribution; rules cite the feature values that fired. All of it goes into the Alert Envelope `evidence`.
+
+**Evaluation protocol (so we cannot fool ourselves).**
+- Split by **scenario run (seed)**, never by window: an attack run never appears in both training and test.
+- **Leave-one-attack-class-out:** train fusion without one class (e.g. exfiltration) and test on it. This measures generalisation; the unsupervised layers have to carry it.
+- **Ablations:** rules only, Isolation Forest only, sequence only, rules + IF, full fusion. Fusion must beat the best single detector on PR-AUC *and* on alerts per analyst per day at equal recall — if it does not, we report that.
+- **Dumb baselines** for context: a fixed threshold on event count, random scoring.
+- **Metrics:** PR-AUC, precision / recall at the operating point per attack class, ECE / Brier, abstention rate, alerts per analyst per day. No accuracy headline.
+- **Distribution shift:** at least one held-out seed with different volume, timing and noise.
+- Repeat over several seeds and report the spread, not one lucky number.
+
+**Risks and mitigations.**
+- *Synthetic data leakage* (models learn generator artefacts): randomise timing / volume / ordering; include benign look-alikes as hard negatives (admin bulk export, backup jobs, forgotten passwords); report across seeds.
+- *Cold start* (new entity, no history): baseline `min_history_events` gives 0 for novelty instead of false alarms; uncertain cases go to `review`.
+- *Label scarcity:* unsupervised layers do the heavy lifting; the supervised stage stays small and regularised.
+- *Drift:* baseline is a versioned artefact that can be refitted; out of scope for v1 beyond versioning.
+
+**Artefacts.** Trained models and calibrators are saved with `joblib` under `data/models/`, each stamped with `detector_version` / `calibration_version`, so every number in the dashboard traces back to the model that produced it.
+
+---
+
+## 5. Dependency Order
+
+```
+Phase 0 ──► Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 4 ──► Phase 5 ──► Phase 6 ──► Phase 7
+                                                                                       │
+                                                                     Phase 8 ◄─────────┘
+                                                                        │
+                       Developer B CR-01…CR-07 ─────────────────────► Phase 9
+```
+
+Phases 0–8 are independent of Developer B and run against fixtures. Only Phase 9 waits for platform changes.
+
+---
+
+## 6. Working Rules (from the playbook)
+
+- Small commits on `predictions`; pull / rebase before each phase.
+- No change to shared schemas without updating the contract first and telling Developer B.
+- One feature implementation for training and inference.
+- No new dependency without approval.
+- Every phase ships tests and fixtures; module notes explain how to run it.
+
+## 7. Out of Scope for v1
+
+Blocking or automated response, full graph database, graph neural networks, more than three detectors, threat-actor / campaign naming, log retention, large-scale infrastructure, dashboard styling.
+
+---
+
+## 8. Progress Tracker
+
+| Phase | Status | Notes |
+| :--- | :--- | :--- |
+| 0 — Setup & contract | **Done** (Oct 21, 2026) | Contract + plan committed; CR-01 … CR-07 delivered by Developer B and verified on `main`; platform runs locally, 59/59 platform tests pass |
+| 1 — Real-data corpus & ground truth | **Done** (Oct 21, 2026) | **1e: all 8 AIT-LDS v2.0 scenarios** (company hosts only, generated specs, asset inventories): development = `russellmitchell`, `fox`; held-out = `harrison`, `santos`, `shaw`, `wardbeck`, `wheeler`, `wilson`, not scored before the design freeze. Earlier: | 1a Org X done (plumbing only: one client IP). 1c Org Y done: 221,606 SSH/sudo events (406 source IPs) + 173,104 web events, 0 contract problems; almost all hostile traffic and no label for the compromise itself. 1b done for Org Y: incident / background / unknown window labels, time-ordered splits (21 incident windows, all in test; one incident, so zero-shot evaluation only). 1d AIT `russellmitchell` converted (web 11,184 · DNS 81,277 · VPN 66 · auth 6 events; per-line labels; every label recounted independently). 1b AIT done: labels from the dataset's per-event ground truth, incident > exfiltration > background, Jan 21–23 baseline / train / validation, Jan 24 test (10 incident, 167 exfiltration, 815 background windows), as-is and clean-baseline variants. More AIT scenarios needed for supervised fusion |
+| 2 — Resolution & features | **Done** (Oct 21, 2026) | 28 features (fs-1.2.0: + service-account privilege use, credential-file access, DNS distinct / long names), rolling entity history, login-history gate for source-IP novelty; see `logs.md` |
+| 3 — Detectors | **3a + 3b + 3d done** (Oct 21, 2026) | **3d: rules-1.2.0 (12 rules) + fs-1.2.0, designed on the development scenarios: `russellmitchell` 5/10 incident windows, all 4 stages, 0 false alarms/day, exfiltration 167/167; `fox` 9/14, all 4 stages, 0.5/day; first alert 5 min. Frozen; held-out evaluation next.** Earlier: rules-1.0.0 (9 rules) and iforest-1.0.0. Org Y zero-shot, one incident (optimistic): first alert in the first incident window; best combination 15/21 incident windows at ~48 false alarms/day. Calibration flaw diagnosed (threshold ties on routine cron) → rules-1.1.0 (strict bound above background max × 1.25 + validation gate). **AIT `russellmitchell`, first unseen test:** 1 / 10 incident windows (web scan) at 0 false alarms per day; entry, discovery, privilege and exfiltration missed (cold start, shared NAT address, Isolation Forest saturation, no DNS features); Isolation Forest ROC 0.93 within IP windows. `russellmitchell` is now a development scenario. 3c sequence model not started |
+| 4 — Fusion & calibration | **Done** (Oct 21, 2026) | `fusion.py` (weighted logistic regression, isotonic calibration, τ_alert / τ_review, Fused Alerts with duplicate folding, rules-first decision). Leave-one-scenario-out over 8: fusion ranks better than rules in 6/6 held-out folds (PR-AUC 0.68 vs 0.63), ECE 0.002; at the operating point it does **not** beat rules (2.5 vs 0.38 false alarms/day for +2 hostile windows); folding cuts 22 flagged windows/day to 6.4 Fused Alerts/day. `data/evaluation/calibration.json` |
+| 3 (held-out) | **Done** | Frozen rules-1.2.0 on 6 unseen scenarios: 6/6 intrusions, 66 % of incident windows, 0.38 false alarms/day, entry and privilege 6/6, exfiltration 111/112, first alert 5 min |
+| 5 — Correlation | **Done** (Oct 21, 2026) | `attribution/correlation.py` (entity-time graph: shared actors + pivots, asset-inventory canonicalisation, 24 h horizon). Every intrusion (8/8, held-out 6/6) becomes ONE incident holding 100 % of its alerts, across all four layers; exfiltration never merged; 1.1 benign-only incidents/day held-out. Known limitation: the VPN server acts as a hub (7 review-level benign alerts merged in one development scenario) |
+| 6 — Attribution | **Done** (Oct 21, 2026) | `attribution/graph.py` (NetworkX; entry = graph root, time-respecting earliest-arrival path citing real events, reached assets, blast radius, dwell, confidence, platform graph shape). Held-out: entry account / origin / exact event 6/6 (pre-registered 1.0.0: 4/6; 1.1.0 root rule post-hoc, disclosed), privilege host reached 6/6, reached precision 1.0 / recall 0.69, path precision 0.89, dwell exact 6/6 |
+| 7 — Risk scoring | **Done** (Oct 21, 2026) | `attribution/risk.py` (contract §8, half-life 24 h, weight 0.5 + 0.1 × criticality, contributors). Intrusion incident critical 8/8, ranked first 7/8 (held-out 5/6; `wilson`: a fresher benign alert outranks an intrusion 36 h old — decay as designed) |
+| 8 — Evaluation | **Done** (Oct 21, 2026) | `scripts/evaluate.py`: one command, every stage, `data/evaluation/evaluation_results.json` (contract §9, held-out figures, no accuracy); deterministic |
+| 9 — Integration & handoff | **Done on `predictions`** (Oct 21, 2026) | `services/pipeline.py` (`run_pipeline`, `deliver`), `tests/test_e2e_pipeline.py` against Developer B's API (events, alerts, incidents, attributions, evaluation summary all accepted and read back), `docs/HANDOFF_DEVELOPER_A.md`; new CR-08 … CR-10 to Developer B. Merge into `main` is the team's call |

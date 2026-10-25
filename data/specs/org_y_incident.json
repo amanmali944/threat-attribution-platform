@@ -1,0 +1,22 @@
+{
+  "dataset": "web-server-log-dataset/organization-y/auth",
+  "window_seconds": 300,
+  "routine_command_min_hours": 20,
+  "incident": {
+    "start": "2025-04-29T05:28:00Z",
+    "end": "2025-04-29T07:10:00Z"
+  },
+  "splits": {
+    "baseline":   ["2025-04-27T00:00:00Z", "2025-04-28T00:00:00Z"],
+    "train":      ["2025-04-28T00:00:00Z", "2025-04-29T00:00:00Z"],
+    "validation": ["2025-04-29T00:00:00Z", "2025-04-29T04:00:00Z"],
+    "gap":        ["2025-04-29T04:00:00Z", "2025-04-29T05:00:00Z"],
+    "test":       ["2025-04-29T05:00:00Z", "2025-05-01T00:30:00Z"]
+  },
+  "provenance": {
+    "incident_window": "Dataset description (Zenodo 10.5281/zenodo.20001206, Organization Y): successful privilege escalation on 2025-04-29 from 05:28 to 07:07 local time. The last rule-labelled post-compromise command is at 07:08:46, so the end is set to 07:10:00.",
+    "timezone_assumption": "The description says 'local time' and syslog has no zone. UTC is assumed: the first successful root login (05:34:30) and the first rule-labelled post-compromise command (06:09:07) then fall inside the documented window. Not proven.",
+    "single_incident": "Only one incident exists in this slice. It supports a zero-shot evaluation of unsupervised and rule detectors; it cannot train or calibrate a supervised model for incident detection.",
+    "splits": "Time-ordered. baseline: fit the baseline only (not scored). train: fit unsupervised models on background windows. validation: pick thresholds / alert budget from background windows (no incident labels exist here). gap: excluded. test: contains the incident and what follows it."
+  }
+}

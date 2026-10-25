@@ -6,6 +6,8 @@ import {
   Activity,
   Layers,
   Terminal,
+  BarChart3,
+  Server,
 } from 'lucide-react';
 
 interface NavItem {
@@ -16,25 +18,26 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: 'Dashboard', to: '/', icon: LayoutDashboard },
-  { name: 'Alerts', to: '/alerts', icon: BellRing },
+  { name: 'Overview', to: '/', icon: LayoutDashboard },
   { name: 'Incidents', to: '/incidents', icon: ShieldAlert },
+  { name: 'ML Evaluation', to: '/evaluation', icon: BarChart3, badge: 'BENCH' },
+  { name: 'Entities', to: '/entities', icon: Server },
+  { name: 'Alerts', to: '/alerts', icon: BellRing },
   { name: 'Platform Health', to: '/health', icon: Activity },
 ];
 
 export function Sidebar() {
   return (
-    <aside className="flex w-64 flex-col justify-between border-r border-[#334155] bg-[#0f172a] p-4">
+    <aside className="flex w-64 flex-col justify-between border-r border-[#1c1c1c] bg-black p-4">
       {/* Top Nav Section */}
       <div className="flex flex-col gap-6">
-        {/* Navigation Category Label */}
-        <div className="flex items-center gap-2 px-3 text-[11px] font-mono uppercase tracking-wider text-[#64748b]">
-          <Layers className="h-3.5 w-3.5" />
-          <span>SOC Navigation</span>
+        <div className="flex items-center gap-2 px-2 text-[11px] font-jb uppercase tracking-wider text-[#949494]">
+          <Layers className="h-3.5 w-3.5 text-[#c81b1c]" />
+          <span>Console Navigation</span>
         </div>
 
         {/* Links List */}
-        <nav className="flex flex-col gap-1.5">
+        <nav className="flex flex-col gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -43,19 +46,19 @@ export function Sidebar() {
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                  `flex items-center justify-between px-3 py-2 text-xs font-jb uppercase tracking-wider transition ${
                     isActive
-                      ? 'border border-[#22d3ee]/30 bg-[#22d3ee]/10 text-[#22d3ee] shadow-[0_0_15px_rgba(34,211,238,0.15)]'
-                      : 'text-[#94a3b8] hover:bg-[#1e293b] hover:text-[#f1f5f9]'
+                      ? 'border-l-2 border-[#c81b1c] bg-[#141414] text-white font-semibold'
+                      : 'text-[#949494] hover:bg-[#0c0c0c] hover:text-white'
                   }`
                 }
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <Icon className="h-4 w-4" />
                   <span>{item.name}</span>
                 </div>
                 {item.badge && (
-                  <span className="rounded bg-[#334155] px-1.5 py-0.5 text-[10px] font-mono text-[#22d3ee]">
+                  <span className="border border-[#c81b1c] bg-[#c81b1c]/10 px-1 py-0.5 text-[9px] font-jb text-[#c81b1c]">
                     {item.badge}
                   </span>
                 )}
@@ -66,20 +69,20 @@ export function Sidebar() {
       </div>
 
       {/* Bottom Status / System Metadata Footer */}
-      <div className="flex flex-col gap-3 rounded-lg border border-[#334155] bg-[#030712]/50 p-3 text-xs">
-        <div className="flex items-center gap-2 text-[#94a3b8]">
-          <Terminal className="h-4 w-4 text-[#22d3ee]" />
-          <span className="font-mono text-[11px] font-semibold text-[#f1f5f9]">
-            ATTRIBUTION CORE
+      <div className="flex flex-col gap-2 border border-[#1f1f1f] bg-[#0a0a0a] p-3 text-xs">
+        <div className="flex items-center gap-2 text-[#949494]">
+          <Terminal className="h-3.5 w-3.5 text-[#c81b1c]" />
+          <span className="font-sg text-[11px] font-bold text-white uppercase tracking-wider">
+            Attribution Engine
           </span>
         </div>
-        <div className="flex justify-between font-mono text-[10px] text-[#64748b]">
-          <span>ENGINE VERSION:</span>
-          <span className="text-[#22d3ee]">v1.0.0-PROD</span>
+        <div className="flex justify-between font-jb text-[10px] text-[#949494]">
+          <span>VERSION:</span>
+          <span className="text-white">v1.0.0-STAGE</span>
         </div>
-        <div className="flex justify-between font-mono text-[10px] text-[#64748b]">
-          <span>DEFENSE POSTURE:</span>
-          <span className="text-emerald-400">OPTIMAL</span>
+        <div className="flex justify-between font-jb text-[10px] text-[#949494]">
+          <span>POSTURE:</span>
+          <span className="text-[#c81b1c] font-bold">OPERATIONAL</span>
         </div>
       </div>
     </aside>

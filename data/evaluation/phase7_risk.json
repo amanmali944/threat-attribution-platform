@@ -1,0 +1,277 @@
+{
+  "method": "contract section 8, half-life 24 h, weight 0.5 + 0.1 x criticality",
+  "pooled": {
+    "development": {
+      "benign_incidents_high_or_critical": 1,
+      "intrusion_high_or_critical": "2/2",
+      "intrusion_ranked_first": "2/2",
+      "scenarios": 2
+    },
+    "held-out": {
+      "benign_incidents_high_or_critical": 1,
+      "intrusion_high_or_critical": "6/6",
+      "intrusion_ranked_first": "5/6",
+      "scenarios": 6
+    }
+  },
+  "scenarios": {
+    "fox": {
+      "benign_high_or_critical": 1,
+      "computed_at": "2022-01-20T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 2,
+      "intrusion_level": "critical",
+      "intrusion_rank": 1,
+      "intrusion_score": 86.14,
+      "max_benign_score": 78.53,
+      "ranked": [
+        {
+          "alerts": 6,
+          "contributors": 6,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 86.14
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "critical",
+          "score": 78.53
+        }
+      ],
+      "role": "development"
+    },
+    "harrison": {
+      "benign_high_or_critical": 0,
+      "computed_at": "2022-02-09T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 4,
+      "intrusion_level": "critical",
+      "intrusion_rank": 1,
+      "intrusion_score": 98.3,
+      "max_benign_score": 8.36,
+      "ranked": [
+        {
+          "alerts": 6,
+          "contributors": 6,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 98.3
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "exfiltration",
+          "level": "high",
+          "score": 58.78
+        },
+        {
+          "alerts": 4,
+          "contributors": 4,
+          "kind": "benign",
+          "level": "low",
+          "score": 8.36
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "low",
+          "score": 3.01
+        }
+      ],
+      "role": "held-out"
+    },
+    "russellmitchell": {
+      "benign_high_or_critical": 0,
+      "computed_at": "2022-01-25T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 4,
+      "intrusion_level": "critical",
+      "intrusion_rank": 1,
+      "intrusion_score": 96.01,
+      "max_benign_score": 4.56,
+      "ranked": [
+        {
+          "alerts": 13,
+          "contributors": 13,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 96.01
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "exfiltration",
+          "level": "high",
+          "score": 67.26
+        },
+        {
+          "alerts": 3,
+          "contributors": 3,
+          "kind": "benign",
+          "level": "low",
+          "score": 4.56
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "low",
+          "score": 1.94
+        }
+      ],
+      "role": "development"
+    },
+    "santos": {
+      "benign_high_or_critical": 0,
+      "computed_at": "2022-01-18T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 1,
+      "intrusion_level": "critical",
+      "intrusion_rank": 1,
+      "intrusion_score": 99.26,
+      "max_benign_score": null,
+      "ranked": [
+        {
+          "alerts": 5,
+          "contributors": 5,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 99.26
+        }
+      ],
+      "role": "held-out"
+    },
+    "shaw": {
+      "benign_high_or_critical": 0,
+      "computed_at": "2022-01-31T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 1,
+      "intrusion_level": "critical",
+      "intrusion_rank": 1,
+      "intrusion_score": 87.63,
+      "max_benign_score": null,
+      "ranked": [
+        {
+          "alerts": 5,
+          "contributors": 5,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 87.63
+        }
+      ],
+      "role": "held-out"
+    },
+    "wardbeck": {
+      "benign_high_or_critical": 0,
+      "computed_at": "2022-01-24T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 2,
+      "intrusion_level": "critical",
+      "intrusion_rank": 1,
+      "intrusion_score": 99.47,
+      "max_benign_score": 45.83,
+      "ranked": [
+        {
+          "alerts": 5,
+          "contributors": 5,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 99.47
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "medium",
+          "score": 45.83
+        }
+      ],
+      "role": "held-out"
+    },
+    "wheeler": {
+      "benign_high_or_critical": 0,
+      "computed_at": "2022-01-31T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 1,
+      "intrusion_level": "critical",
+      "intrusion_rank": 1,
+      "intrusion_score": 99.92,
+      "max_benign_score": null,
+      "ranked": [
+        {
+          "alerts": 6,
+          "contributors": 6,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 99.92
+        }
+      ],
+      "role": "held-out"
+    },
+    "wilson": {
+      "benign_high_or_critical": 1,
+      "computed_at": "2022-02-09T00:00:00Z",
+      "every_nonzero_score_explained": true,
+      "incidents": 7,
+      "intrusion_level": "critical",
+      "intrusion_rank": 2,
+      "intrusion_score": 84.75,
+      "max_benign_score": 92.49,
+      "ranked": [
+        {
+          "alerts": 5,
+          "contributors": 5,
+          "kind": "benign",
+          "level": "critical",
+          "score": 92.49
+        },
+        {
+          "alerts": 6,
+          "contributors": 6,
+          "kind": "intrusion",
+          "level": "critical",
+          "score": 84.75
+        },
+        {
+          "alerts": 2,
+          "contributors": 2,
+          "kind": "benign",
+          "level": "low",
+          "score": 1.97
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "low",
+          "score": 1.02
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "low",
+          "score": 0.58
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "low",
+          "score": 0.55
+        },
+        {
+          "alerts": 1,
+          "contributors": 1,
+          "kind": "benign",
+          "level": "low",
+          "score": 0.51
+        }
+      ],
+      "role": "held-out"
+    }
+  }
+}

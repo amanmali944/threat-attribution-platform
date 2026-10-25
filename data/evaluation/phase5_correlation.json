@@ -1,0 +1,847 @@
+{
+  "horizon_seconds": 86400,
+  "method": "entity-time-graph-1.0.0",
+  "pipeline": "leave-one-scenario-out fusion-1.0.0 + rules_first, Fused Alerts (30 min folding)",
+  "pooled": {
+    "development": {
+      "benign_alerts_merged_into_main": 8,
+      "benign_only_incidents_per_day": 1.0,
+      "consolidation_ratio": 4.167,
+      "exfiltration_merged_into_main": 0,
+      "intrusion_in_one_incident": 2,
+      "main_incident_all_4_stages": 2,
+      "main_incident_share_of_intrusion_alerts": 1.0,
+      "scenarios": 2
+    },
+    "held-out": {
+      "benign_alerts_merged_into_main": 1,
+      "benign_only_incidents_per_day": 1.12,
+      "consolidation_ratio": 3.188,
+      "exfiltration_merged_into_main": 0,
+      "intrusion_in_one_incident": 6,
+      "main_incident_all_4_stages": 5,
+      "main_incident_share_of_intrusion_alerts": 1.0,
+      "scenarios": 6
+    }
+  },
+  "scenarios": {
+    "fox": {
+      "benign_only_incidents": 1,
+      "benign_only_incidents_per_day": 0.5,
+      "consolidation_ratio": 3.5,
+      "exfiltration_incidents": 0,
+      "fused_alerts": 7,
+      "fused_alerts_by_label": {
+        "background": 2,
+        "incident": 5
+      },
+      "incident_table": [
+        {
+          "alerts": 6,
+          "first_seen": "2022-01-18T11:59:00Z",
+          "incident_id": "inc-4c817dc2",
+          "labels": {
+            "background": 1,
+            "incident": 5
+          },
+          "last_seen": "2022-01-18T13:14:49Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "pivot",
+            "shared_entity",
+            "shared_entity"
+          ],
+          "stages": [
+            "discovery",
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Initial access leading to privilege escalation"
+        },
+        {
+          "alerts": 1,
+          "first_seen": "2022-01-19T20:02:10Z",
+          "incident_id": "inc-8559b1d1",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-01-19T20:03:06Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Reconnaissance"
+        }
+      ],
+      "incidents": 2,
+      "incidents_per_day": 1.0,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": true,
+        "benign_alerts_merged": 1,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 0,
+        "incident_id": "inc-4c817dc2",
+        "intrusion_alerts": 5,
+        "intrusion_alerts_total": 5,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "discovery",
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Initial access leading to privilege escalation"
+      },
+      "role": "development",
+      "test_days": 2
+    },
+    "harrison": {
+      "benign_only_incidents": 2,
+      "benign_only_incidents_per_day": 2.0,
+      "consolidation_ratio": 3.0,
+      "exfiltration_incidents": 1,
+      "fused_alerts": 12,
+      "fused_alerts_by_label": {
+        "background": 6,
+        "exfiltration": 1,
+        "incident": 5
+      },
+      "incident_table": [
+        {
+          "alerts": 1,
+          "first_seen": "2022-02-08T00:00:01Z",
+          "incident_id": "inc-90515e4d",
+          "labels": {
+            "exfiltration": 1
+          },
+          "last_seen": "2022-02-08T09:14:49Z",
+          "layers": [
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Exfiltration"
+        },
+        {
+          "alerts": 4,
+          "first_seen": "2022-02-08T05:25:09Z",
+          "incident_id": "inc-f20abaaa",
+          "labels": {
+            "background": 4
+          },
+          "last_seen": "2022-02-08T09:44:41Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [
+            "shared_entity"
+          ],
+          "stages": [],
+          "title": "Anomalous activity"
+        },
+        {
+          "alerts": 6,
+          "first_seen": "2022-02-08T07:07:00Z",
+          "incident_id": "inc-46446cab",
+          "labels": {
+            "background": 1,
+            "incident": 5
+          },
+          "last_seen": "2022-02-08T08:37:08Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "pivot",
+            "shared_entity",
+            "shared_entity"
+          ],
+          "stages": [
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Initial access leading to privilege escalation"
+        },
+        {
+          "alerts": 1,
+          "first_seen": "2022-02-08T09:46:43Z",
+          "incident_id": "inc-19e5fb49",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-02-08T10:04:29Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Anomalous activity"
+        }
+      ],
+      "incidents": 4,
+      "incidents_per_day": 4.0,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": false,
+        "benign_alerts_merged": 1,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 1,
+        "incident_id": "inc-46446cab",
+        "intrusion_alerts": 5,
+        "intrusion_alerts_total": 5,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Initial access leading to privilege escalation"
+      },
+      "role": "held-out",
+      "test_days": 1.0
+    },
+    "russellmitchell": {
+      "benign_only_incidents": 2,
+      "benign_only_incidents_per_day": 2.0,
+      "consolidation_ratio": 4.5,
+      "exfiltration_incidents": 1,
+      "fused_alerts": 18,
+      "fused_alerts_by_label": {
+        "background": 11,
+        "exfiltration": 1,
+        "incident": 6
+      },
+      "incident_table": [
+        {
+          "alerts": 1,
+          "first_seen": "2022-01-24T00:00:01Z",
+          "incident_id": "inc-53931691",
+          "labels": {
+            "exfiltration": 1
+          },
+          "last_seen": "2022-01-24T13:52:15Z",
+          "layers": [
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Exfiltration"
+        },
+        {
+          "alerts": 13,
+          "first_seen": "2022-01-24T03:01:00Z",
+          "incident_id": "inc-8babe084",
+          "labels": {
+            "background": 7,
+            "incident": 6
+          },
+          "last_seen": "2022-01-24T18:13:02Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "pivot",
+            "shared_entity",
+            "shared_entity",
+            "shared_entity",
+            "shared_entity",
+            "shared_entity"
+          ],
+          "stages": [
+            "discovery",
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Initial access leading to privilege escalation"
+        },
+        {
+          "alerts": 3,
+          "first_seen": "2022-01-24T07:49:19Z",
+          "incident_id": "inc-97ea9789",
+          "labels": {
+            "background": 3
+          },
+          "last_seen": "2022-01-24T16:05:11Z",
+          "layers": [
+            "identity"
+          ],
+          "link_reasons": [
+            "shared_entity"
+          ],
+          "stages": [],
+          "title": "Anomalous activity"
+        },
+        {
+          "alerts": 1,
+          "first_seen": "2022-01-24T15:21:32Z",
+          "incident_id": "inc-4f73ee73",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-01-24T15:24:22Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Anomalous activity"
+        }
+      ],
+      "incidents": 4,
+      "incidents_per_day": 4.0,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": true,
+        "benign_alerts_merged": 7,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 1,
+        "incident_id": "inc-8babe084",
+        "intrusion_alerts": 6,
+        "intrusion_alerts_total": 6,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "discovery",
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Initial access leading to privilege escalation"
+      },
+      "role": "development",
+      "test_days": 1.0
+    },
+    "santos": {
+      "benign_only_incidents": 0,
+      "benign_only_incidents_per_day": 0.0,
+      "consolidation_ratio": 5.0,
+      "exfiltration_incidents": 0,
+      "fused_alerts": 5,
+      "fused_alerts_by_label": {
+        "incident": 5
+      },
+      "incident_table": [
+        {
+          "alerts": 5,
+          "first_seen": "2022-01-17T11:15:00Z",
+          "incident_id": "inc-0a149204",
+          "labels": {
+            "incident": 5
+          },
+          "last_seen": "2022-01-17T11:58:54Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "pivot",
+            "shared_entity",
+            "shared_entity"
+          ],
+          "stages": [
+            "discovery",
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Initial access leading to privilege escalation"
+        }
+      ],
+      "incidents": 1,
+      "incidents_per_day": 1.0,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": true,
+        "benign_alerts_merged": 0,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 0,
+        "incident_id": "inc-0a149204",
+        "intrusion_alerts": 5,
+        "intrusion_alerts_total": 5,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "discovery",
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Initial access leading to privilege escalation"
+      },
+      "role": "held-out",
+      "test_days": 1.0
+    },
+    "shaw": {
+      "benign_only_incidents": 0,
+      "benign_only_incidents_per_day": 0.0,
+      "consolidation_ratio": 5.0,
+      "exfiltration_incidents": 0,
+      "fused_alerts": 5,
+      "fused_alerts_by_label": {
+        "incident": 5
+      },
+      "incident_table": [
+        {
+          "alerts": 5,
+          "first_seen": "2022-01-29T14:35:12Z",
+          "incident_id": "inc-ff412f67",
+          "labels": {
+            "incident": 5
+          },
+          "last_seen": "2022-01-29T15:21:09Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "shared_entity",
+            "shared_entity",
+            "stage_order"
+          ],
+          "stages": [
+            "discovery",
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Reconnaissance leading to privilege escalation"
+        }
+      ],
+      "incidents": 1,
+      "incidents_per_day": 0.5,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": true,
+        "benign_alerts_merged": 0,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 0,
+        "incident_id": "inc-ff412f67",
+        "intrusion_alerts": 5,
+        "intrusion_alerts_total": 5,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity",
+          "stage_order"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "discovery",
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Reconnaissance leading to privilege escalation"
+      },
+      "role": "held-out",
+      "test_days": 2
+    },
+    "wardbeck": {
+      "benign_only_incidents": 1,
+      "benign_only_incidents_per_day": 1.0,
+      "consolidation_ratio": 3.0,
+      "exfiltration_incidents": 0,
+      "fused_alerts": 6,
+      "fused_alerts_by_label": {
+        "background": 1,
+        "incident": 5
+      },
+      "incident_table": [
+        {
+          "alerts": 1,
+          "first_seen": "2022-01-23T09:15:12Z",
+          "incident_id": "inc-b7738540",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-01-23T09:16:33Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Reconnaissance"
+        },
+        {
+          "alerts": 5,
+          "first_seen": "2022-01-23T12:10:00Z",
+          "incident_id": "inc-8febceea",
+          "labels": {
+            "incident": 5
+          },
+          "last_seen": "2022-01-23T12:55:19Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "pivot",
+            "shared_entity"
+          ],
+          "stages": [
+            "discovery",
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Initial access leading to privilege escalation"
+        }
+      ],
+      "incidents": 2,
+      "incidents_per_day": 2.0,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": true,
+        "benign_alerts_merged": 0,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 0,
+        "incident_id": "inc-8febceea",
+        "intrusion_alerts": 5,
+        "intrusion_alerts_total": 5,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "discovery",
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Initial access leading to privilege escalation"
+      },
+      "role": "held-out",
+      "test_days": 1.0
+    },
+    "wheeler": {
+      "benign_only_incidents": 0,
+      "benign_only_incidents_per_day": 0.0,
+      "consolidation_ratio": 6.0,
+      "exfiltration_incidents": 0,
+      "fused_alerts": 6,
+      "fused_alerts_by_label": {
+        "incident": 6
+      },
+      "incident_table": [
+        {
+          "alerts": 6,
+          "first_seen": "2022-01-30T07:35:00Z",
+          "incident_id": "inc-4bdfe3f6",
+          "labels": {
+            "incident": 6
+          },
+          "last_seen": "2022-01-30T17:52:13Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "pivot",
+            "shared_entity",
+            "shared_entity"
+          ],
+          "stages": [
+            "discovery",
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Initial access leading to privilege escalation"
+        }
+      ],
+      "incidents": 1,
+      "incidents_per_day": 1.0,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": true,
+        "benign_alerts_merged": 0,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 0,
+        "incident_id": "inc-4bdfe3f6",
+        "intrusion_alerts": 6,
+        "intrusion_alerts_total": 6,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "discovery",
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Initial access leading to privilege escalation"
+      },
+      "role": "held-out",
+      "test_days": 1.0
+    },
+    "wilson": {
+      "benign_only_incidents": 6,
+      "benign_only_incidents_per_day": 3.0,
+      "consolidation_ratio": 2.429,
+      "exfiltration_incidents": 0,
+      "fused_alerts": 17,
+      "fused_alerts_by_label": {
+        "background": 11,
+        "incident": 6
+      },
+      "incident_table": [
+        {
+          "alerts": 5,
+          "first_seen": "2022-02-07T10:11:53Z",
+          "incident_id": "inc-b196bfff",
+          "labels": {
+            "background": 5
+          },
+          "last_seen": "2022-02-08T19:54:51Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [
+            "shared_entity"
+          ],
+          "stages": [],
+          "title": "Reconnaissance"
+        },
+        {
+          "alerts": 6,
+          "first_seen": "2022-02-07T10:55:03Z",
+          "incident_id": "inc-e3933788",
+          "labels": {
+            "incident": 6
+          },
+          "last_seen": "2022-02-07T11:48:50Z",
+          "layers": [
+            "application",
+            "endpoint",
+            "identity",
+            "network"
+          ],
+          "link_reasons": [
+            "pivot",
+            "shared_entity",
+            "shared_entity",
+            "shared_entity",
+            "stage_order"
+          ],
+          "stages": [
+            "discovery",
+            "entry",
+            "privilege",
+            "web_attack"
+          ],
+          "title": "Reconnaissance leading to privilege escalation"
+        },
+        {
+          "alerts": 1,
+          "first_seen": "2022-02-07T15:33:45Z",
+          "incident_id": "inc-cc92de53",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-02-07T15:34:05Z",
+          "layers": [
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Anomalous activity"
+        },
+        {
+          "alerts": 1,
+          "first_seen": "2022-02-07T17:55:05Z",
+          "incident_id": "inc-be618781",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-02-07T17:59:59Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Anomalous activity"
+        },
+        {
+          "alerts": 1,
+          "first_seen": "2022-02-07T20:00:26Z",
+          "incident_id": "inc-294b0ca1",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-02-07T20:04:54Z",
+          "layers": [
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Anomalous activity"
+        },
+        {
+          "alerts": 2,
+          "first_seen": "2022-02-08T09:05:55Z",
+          "incident_id": "inc-afd5b706",
+          "labels": {
+            "background": 2
+          },
+          "last_seen": "2022-02-08T10:44:45Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [
+            "shared_entity"
+          ],
+          "stages": [],
+          "title": "Anomalous activity"
+        },
+        {
+          "alerts": 1,
+          "first_seen": "2022-02-08T15:40:57Z",
+          "incident_id": "inc-a2e1f516",
+          "labels": {
+            "background": 1
+          },
+          "last_seen": "2022-02-08T15:44:33Z",
+          "layers": [
+            "application",
+            "network"
+          ],
+          "link_reasons": [],
+          "stages": [],
+          "title": "Anomalous activity"
+        }
+      ],
+      "incidents": 7,
+      "incidents_per_day": 3.5,
+      "intrusion_incidents": 1,
+      "main_intrusion_incident": {
+        "all_stages_present": true,
+        "benign_alerts_merged": 0,
+        "exfiltration_alerts_merged": 0,
+        "exfiltration_alerts_total": 0,
+        "incident_id": "inc-e3933788",
+        "intrusion_alerts": 6,
+        "intrusion_alerts_total": 6,
+        "layers": [
+          "application",
+          "endpoint",
+          "identity",
+          "network"
+        ],
+        "link_reasons": [
+          "pivot",
+          "shared_entity",
+          "stage_order"
+        ],
+        "share_of_intrusion_alerts": 1.0,
+        "stages": [
+          "discovery",
+          "entry",
+          "privilege",
+          "web_attack"
+        ],
+        "title": "Reconnaissance leading to privilege escalation"
+      },
+      "role": "held-out",
+      "test_days": 2
+    }
+  },
+  "seconds": 106.0,
+  "variant": "asis"
+}

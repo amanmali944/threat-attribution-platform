@@ -1,0 +1,101 @@
+{
+  "calibration_version": "cal-1.0.0",
+  "coefficients": {
+    "failure.http_error_rate": 0.0645,
+    "iforest.missing": 0.08,
+    "iforest.score": 1.9321,
+    "log.dns_long_names": 0.2722,
+    "log.event_count": -0.1534,
+    "log.new_target": 0.1791,
+    "log.privileged_ops": 0.3531,
+    "novelty.new_source_ip": 0.1773,
+    "peer.volume_z": -0.1757,
+    "rules.count": 1.0772,
+    "rules.high": 0.4343,
+    "rules.medium": 0.0,
+    "timing.off_hours": -0.2416,
+    "type.host": 0.0781,
+    "type.ip": 0.177,
+    "type.user": -0.1928
+  },
+  "decision_policy": "rules_first (fusion.rules_first): high rule -> alert; other rule -> at least review",
+  "detector_versions": [
+    "rules-1.2.0 / iforest-1.1.0 / fs-1.2.0"
+  ],
+  "evaluation": "phase4_fusion_loso_logreg.json",
+  "fusion_version": "fusion-1.0.0",
+  "inputs": [
+    "rules.high",
+    "rules.medium",
+    "rules.count",
+    "iforest.score",
+    "iforest.missing",
+    "log.event_count",
+    "peer.volume_z",
+    "novelty.new_source_ip",
+    "log.new_target",
+    "log.privileged_ops",
+    "failure.http_error_rate",
+    "timing.off_hours",
+    "log.dns_long_names",
+    "type.user",
+    "type.host",
+    "type.ip"
+  ],
+  "model": "logreg",
+  "thresholds": {
+    "alert_reachable": true,
+    "review_recall": 0.9,
+    "target_precision": 0.8,
+    "tau_alert": 0.023255813953488372,
+    "tau_review": 0.023255813953488372
+  },
+  "trained_on": [
+    "russellmitchell",
+    "fox",
+    "harrison",
+    "santos",
+    "shaw",
+    "wardbeck",
+    "wheeler",
+    "wilson"
+  ],
+  "training": {
+    "calibration_scheme": "leave-one-scenario-out",
+    "folds": 8,
+    "groups": [
+      "fox",
+      "harrison",
+      "russellmitchell",
+      "santos",
+      "shaw",
+      "wardbeck",
+      "wheeler",
+      "wilson"
+    ],
+    "hostile_windows": 371,
+    "out_of_fold_reliability": {
+      "bins": [
+        {
+          "fraction_hostile": 0.0021,
+          "hi": 0.1,
+          "lo": 0.0,
+          "mean_confidence": 0.0021,
+          "n": 15549
+        },
+        {
+          "fraction_hostile": 0.9883,
+          "hi": 1.0,
+          "lo": 0.9,
+          "mean_confidence": 0.9883,
+          "n": 342
+        }
+      ],
+      "brier": 0.0023,
+      "ece": 0.0,
+      "n": 15891
+    },
+    "windows": 15891
+  },
+  "variant": "asis"
+}

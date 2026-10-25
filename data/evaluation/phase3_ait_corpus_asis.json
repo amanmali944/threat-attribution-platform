@@ -1,0 +1,1203 @@
+{
+  "decisions": {
+    "iforest>=0.99": {
+      "per_scenario": {
+        "fox": {
+          "false_alarm_windows": 42,
+          "false_alarms_per_day": 21.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 14,
+          "latency_minutes": 25.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "harrison": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 112,
+          "false_alarm_windows": 13,
+          "false_alarms_per_day": 13.0,
+          "incident_windows_flagged": 7,
+          "incident_windows_total": 17,
+          "latency_minutes": 25.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "russellmitchell": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 167,
+          "false_alarm_windows": 19,
+          "false_alarms_per_day": 19.0,
+          "incident_windows_flagged": 1,
+          "incident_windows_total": 10,
+          "latency_minutes": 60.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "santos": {
+          "false_alarm_windows": 12,
+          "false_alarms_per_day": 12.0,
+          "incident_windows_flagged": 1,
+          "incident_windows_total": 9,
+          "latency_minutes": 10.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "shaw": {
+          "false_alarm_windows": 24,
+          "false_alarms_per_day": 12.0,
+          "incident_windows_flagged": 1,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wardbeck": {
+          "false_alarm_windows": 5,
+          "false_alarms_per_day": 5.0,
+          "incident_windows_flagged": 1,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wheeler": {
+          "false_alarm_windows": 16,
+          "false_alarms_per_day": 16.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wilson": {
+          "false_alarm_windows": 48,
+          "false_alarms_per_day": 24.0,
+          "incident_windows_flagged": 8,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        }
+      },
+      "pooled": {
+        "development": {
+          "exfiltration_windows": "0/167",
+          "false_alarm_windows": 61,
+          "false_alarms_per_day": 20.33,
+          "incident_windows_flagged": 6,
+          "incident_windows_total": 24,
+          "incidents_detected": 2,
+          "median_latency_minutes": 42.5,
+          "scenarios": 2,
+          "stages_detected": {
+            "discovery": "2/2",
+            "entry": "0/2",
+            "privilege": "0/2",
+            "web_attack": "2/2"
+          },
+          "test_days": 3.0,
+          "window_recall": 0.25
+        },
+        "held-out": {
+          "exfiltration_windows": "0/112",
+          "false_alarm_windows": 118,
+          "false_alarms_per_day": 14.75,
+          "incident_windows_flagged": 23,
+          "incident_windows_total": 68,
+          "incidents_detected": 6,
+          "median_latency_minutes": 5.0,
+          "scenarios": 6,
+          "stages_detected": {
+            "discovery": "5/6",
+            "entry": "1/6",
+            "privilege": "1/6",
+            "web_attack": "6/6"
+          },
+          "test_days": 8.0,
+          "window_recall": 0.3382
+        }
+      }
+    },
+    "iforest>=0.999": {
+      "per_scenario": {
+        "fox": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 0.5,
+          "incident_windows_flagged": 0,
+          "incident_windows_total": 14,
+          "latency_minutes": null,
+          "stages_detected": {
+            "discovery": false,
+            "entry": false,
+            "privilege": false,
+            "web_attack": false
+          }
+        },
+        "harrison": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 112,
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 4,
+          "incident_windows_total": 17,
+          "latency_minutes": 25.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "russellmitchell": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 167,
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 0,
+          "incident_windows_total": 10,
+          "latency_minutes": null,
+          "stages_detected": {
+            "discovery": false,
+            "entry": false,
+            "privilege": false,
+            "web_attack": false
+          }
+        },
+        "santos": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 1,
+          "incident_windows_total": 9,
+          "latency_minutes": 10.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "shaw": {
+          "false_alarm_windows": 4,
+          "false_alarms_per_day": 2.0,
+          "incident_windows_flagged": 0,
+          "incident_windows_total": 8,
+          "latency_minutes": null,
+          "stages_detected": {
+            "discovery": false,
+            "entry": false,
+            "privilege": false,
+            "web_attack": false
+          }
+        },
+        "wardbeck": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 0,
+          "incident_windows_total": 8,
+          "latency_minutes": null,
+          "stages_detected": {
+            "discovery": false,
+            "entry": false,
+            "privilege": false,
+            "web_attack": false
+          }
+        },
+        "wheeler": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wilson": {
+          "false_alarm_windows": 4,
+          "false_alarms_per_day": 2.0,
+          "incident_windows_flagged": 6,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": false,
+            "privilege": true,
+            "web_attack": true
+          }
+        }
+      },
+      "pooled": {
+        "development": {
+          "exfiltration_windows": "0/167",
+          "false_alarm_windows": 2,
+          "false_alarms_per_day": 0.67,
+          "incident_windows_flagged": 0,
+          "incident_windows_total": 24,
+          "incidents_detected": 0,
+          "median_latency_minutes": null,
+          "scenarios": 2,
+          "stages_detected": {
+            "discovery": "0/2",
+            "entry": "0/2",
+            "privilege": "0/2",
+            "web_attack": "0/2"
+          },
+          "test_days": 3.0,
+          "window_recall": 0.0
+        },
+        "held-out": {
+          "exfiltration_windows": "0/112",
+          "false_alarm_windows": 9,
+          "false_alarms_per_day": 1.12,
+          "incident_windows_flagged": 13,
+          "incident_windows_total": 68,
+          "incidents_detected": 4,
+          "median_latency_minutes": 7.5,
+          "scenarios": 6,
+          "stages_detected": {
+            "discovery": "3/6",
+            "entry": "0/6",
+            "privilege": "1/6",
+            "web_attack": "4/6"
+          },
+          "test_days": 8.0,
+          "window_recall": 0.1912
+        }
+      }
+    },
+    "rules-1.0.0:any": {
+      "per_scenario": {
+        "fox": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 0.5,
+          "incident_windows_flagged": 6,
+          "incident_windows_total": 14,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "harrison": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 112,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 9,
+          "incident_windows_total": 17,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "russellmitchell": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 167,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 10,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "santos": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 9,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "shaw": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wardbeck": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wheeler": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 7,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wilson": {
+          "false_alarm_windows": 2,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 7,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        }
+      },
+      "pooled": {
+        "development": {
+          "exfiltration_windows": "0/167",
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 0.33,
+          "incident_windows_flagged": 8,
+          "incident_windows_total": 24,
+          "incidents_detected": 2,
+          "median_latency_minutes": 5.0,
+          "scenarios": 2,
+          "stages_detected": {
+            "discovery": "2/2",
+            "entry": "2/2",
+            "privilege": "0/2",
+            "web_attack": "2/2"
+          },
+          "test_days": 3.0,
+          "window_recall": 0.3333
+        },
+        "held-out": {
+          "exfiltration_windows": "0/112",
+          "false_alarm_windows": 3,
+          "false_alarms_per_day": 0.38,
+          "incident_windows_flagged": 29,
+          "incident_windows_total": 68,
+          "incidents_detected": 6,
+          "median_latency_minutes": 5.0,
+          "scenarios": 6,
+          "stages_detected": {
+            "discovery": "5/6",
+            "entry": "6/6",
+            "privilege": "1/6",
+            "web_attack": "6/6"
+          },
+          "test_days": 8.0,
+          "window_recall": 0.4265
+        }
+      }
+    },
+    "rules-1.1.0:any": {
+      "per_scenario": {
+        "fox": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 0.5,
+          "incident_windows_flagged": 6,
+          "incident_windows_total": 14,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "harrison": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 112,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 9,
+          "incident_windows_total": 17,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "russellmitchell": {
+          "exfiltration_windows_flagged": 0,
+          "exfiltration_windows_total": 167,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 10,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "santos": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 9,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "shaw": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wardbeck": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 2,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wheeler": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 7,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        },
+        "wilson": {
+          "false_alarm_windows": 2,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 7,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": false,
+            "web_attack": true
+          }
+        }
+      },
+      "pooled": {
+        "development": {
+          "exfiltration_windows": "0/167",
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 0.33,
+          "incident_windows_flagged": 8,
+          "incident_windows_total": 24,
+          "incidents_detected": 2,
+          "median_latency_minutes": 5.0,
+          "scenarios": 2,
+          "stages_detected": {
+            "discovery": "2/2",
+            "entry": "2/2",
+            "privilege": "0/2",
+            "web_attack": "2/2"
+          },
+          "test_days": 3.0,
+          "window_recall": 0.3333
+        },
+        "held-out": {
+          "exfiltration_windows": "0/112",
+          "false_alarm_windows": 3,
+          "false_alarms_per_day": 0.38,
+          "incident_windows_flagged": 29,
+          "incident_windows_total": 68,
+          "incidents_detected": 6,
+          "median_latency_minutes": 5.0,
+          "scenarios": 6,
+          "stages_detected": {
+            "discovery": "5/6",
+            "entry": "6/6",
+            "privilege": "1/6",
+            "web_attack": "6/6"
+          },
+          "test_days": 8.0,
+          "window_recall": 0.4265
+        }
+      }
+    },
+    "rules-1.2.0:any": {
+      "per_scenario": {
+        "fox": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 0.5,
+          "incident_windows_flagged": 9,
+          "incident_windows_total": 14,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "harrison": {
+          "exfiltration_windows_flagged": 111,
+          "exfiltration_windows_total": 112,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 11,
+          "incident_windows_total": 17,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "russellmitchell": {
+          "exfiltration_windows_flagged": 167,
+          "exfiltration_windows_total": 167,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 10,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "santos": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 9,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "shaw": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "wardbeck": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "wheeler": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 10,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "wilson": {
+          "false_alarm_windows": 2,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 9,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        }
+      },
+      "pooled": {
+        "development": {
+          "exfiltration_windows": "167/167",
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 0.33,
+          "incident_windows_flagged": 14,
+          "incident_windows_total": 24,
+          "incidents_detected": 2,
+          "median_latency_minutes": 5.0,
+          "scenarios": 2,
+          "stages_detected": {
+            "discovery": "2/2",
+            "entry": "2/2",
+            "privilege": "2/2",
+            "web_attack": "2/2"
+          },
+          "test_days": 3.0,
+          "window_recall": 0.5833
+        },
+        "held-out": {
+          "exfiltration_windows": "111/112",
+          "false_alarm_windows": 3,
+          "false_alarms_per_day": 0.38,
+          "incident_windows_flagged": 45,
+          "incident_windows_total": 68,
+          "incidents_detected": 6,
+          "median_latency_minutes": 5.0,
+          "scenarios": 6,
+          "stages_detected": {
+            "discovery": "5/6",
+            "entry": "6/6",
+            "privilege": "6/6",
+            "web_attack": "6/6"
+          },
+          "test_days": 8.0,
+          "window_recall": 0.6618
+        }
+      }
+    },
+    "rules-1.2.0:any|iforest>=0.999": {
+      "per_scenario": {
+        "fox": {
+          "false_alarm_windows": 2,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 9,
+          "incident_windows_total": 14,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "harrison": {
+          "exfiltration_windows_flagged": 111,
+          "exfiltration_windows_total": 112,
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 11,
+          "incident_windows_total": 17,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "russellmitchell": {
+          "exfiltration_windows_flagged": 167,
+          "exfiltration_windows_total": 167,
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 10,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "santos": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 9,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "shaw": {
+          "false_alarm_windows": 4,
+          "false_alarms_per_day": 2.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "wardbeck": {
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "wheeler": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 10,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        },
+        "wilson": {
+          "false_alarm_windows": 6,
+          "false_alarms_per_day": 3.0,
+          "incident_windows_flagged": 10,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": true,
+            "entry": true,
+            "privilege": true,
+            "web_attack": true
+          }
+        }
+      },
+      "pooled": {
+        "development": {
+          "exfiltration_windows": "167/167",
+          "false_alarm_windows": 3,
+          "false_alarms_per_day": 1.0,
+          "incident_windows_flagged": 14,
+          "incident_windows_total": 24,
+          "incidents_detected": 2,
+          "median_latency_minutes": 5.0,
+          "scenarios": 2,
+          "stages_detected": {
+            "discovery": "2/2",
+            "entry": "2/2",
+            "privilege": "2/2",
+            "web_attack": "2/2"
+          },
+          "test_days": 3.0,
+          "window_recall": 0.5833
+        },
+        "held-out": {
+          "exfiltration_windows": "111/112",
+          "false_alarm_windows": 12,
+          "false_alarms_per_day": 1.5,
+          "incident_windows_flagged": 46,
+          "incident_windows_total": 68,
+          "incidents_detected": 6,
+          "median_latency_minutes": 5.0,
+          "scenarios": 6,
+          "stages_detected": {
+            "discovery": "5/6",
+            "entry": "6/6",
+            "privilege": "6/6",
+            "web_attack": "6/6"
+          },
+          "test_days": 8.0,
+          "window_recall": 0.6765
+        }
+      }
+    },
+    "rules-1.2.0:high": {
+      "per_scenario": {
+        "fox": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 4,
+          "incident_windows_total": 14,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        },
+        "harrison": {
+          "exfiltration_windows_flagged": 111,
+          "exfiltration_windows_total": 112,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 4,
+          "incident_windows_total": 17,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        },
+        "russellmitchell": {
+          "exfiltration_windows_flagged": 167,
+          "exfiltration_windows_total": 167,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 4,
+          "incident_windows_total": 10,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        },
+        "santos": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 4,
+          "incident_windows_total": 9,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        },
+        "shaw": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 4,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        },
+        "wardbeck": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 4,
+          "incident_windows_total": 8,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        },
+        "wheeler": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 5,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        },
+        "wilson": {
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 3,
+          "incident_windows_total": 13,
+          "latency_minutes": 5.0,
+          "stages_detected": {
+            "discovery": false,
+            "entry": true,
+            "privilege": true,
+            "web_attack": false
+          }
+        }
+      },
+      "pooled": {
+        "development": {
+          "exfiltration_windows": "167/167",
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 8,
+          "incident_windows_total": 24,
+          "incidents_detected": 2,
+          "median_latency_minutes": 5.0,
+          "scenarios": 2,
+          "stages_detected": {
+            "discovery": "0/2",
+            "entry": "2/2",
+            "privilege": "2/2",
+            "web_attack": "0/2"
+          },
+          "test_days": 3.0,
+          "window_recall": 0.3333
+        },
+        "held-out": {
+          "exfiltration_windows": "111/112",
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "incident_windows_flagged": 24,
+          "incident_windows_total": 68,
+          "incidents_detected": 6,
+          "median_latency_minutes": 5.0,
+          "scenarios": 6,
+          "stages_detected": {
+            "discovery": "0/6",
+            "entry": "6/6",
+            "privilege": "6/6",
+            "web_attack": "0/6"
+          },
+          "test_days": 8.0,
+          "window_recall": 0.3529
+        }
+      }
+    }
+  },
+  "development_scenarios": [
+    "russellmitchell",
+    "fox"
+  ],
+  "scenarios": {
+    "fox": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [
+        "RULE-NET-002"
+      ],
+      "iforest_incident_roc_auc": 0.6154,
+      "iforest_incident_roc_auc_ip": 0.8589,
+      "role": "development",
+      "test_days": 2.0,
+      "test_windows_by_label": {
+        "background": 2100,
+        "incident": 14
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    },
+    "harrison": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [
+        "RULE-NET-002"
+      ],
+      "iforest_incident_roc_auc": 0.6942,
+      "iforest_incident_roc_auc_ip": 0.8878,
+      "role": "held-out",
+      "test_days": 1.0,
+      "test_windows_by_label": {
+        "background": 1023,
+        "exfiltration": 112,
+        "incident": 17
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    },
+    "russellmitchell": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [
+        "RULE-NET-002"
+      ],
+      "iforest_incident_roc_auc": 0.5748,
+      "iforest_incident_roc_auc_ip": 0.9537,
+      "role": "development",
+      "test_days": 1.0,
+      "test_windows_by_label": {
+        "background": 1153,
+        "exfiltration": 167,
+        "incident": 10
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    },
+    "santos": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [
+        "RULE-NET-002"
+      ],
+      "iforest_incident_roc_auc": 0.4888,
+      "iforest_incident_roc_auc_ip": 0.8754,
+      "role": "held-out",
+      "test_days": 1.0,
+      "test_windows_by_label": {
+        "background": 1631,
+        "incident": 9
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    },
+    "shaw": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [],
+      "iforest_incident_roc_auc": 0.4754,
+      "iforest_incident_roc_auc_ip": 0.9301,
+      "role": "held-out",
+      "test_days": 2.0,
+      "test_windows_by_label": {
+        "background": 2842,
+        "incident": 8
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    },
+    "wardbeck": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [],
+      "iforest_incident_roc_auc": 0.6981,
+      "iforest_incident_roc_auc_ip": 0.9147,
+      "role": "held-out",
+      "test_days": 1.0,
+      "test_windows_by_label": {
+        "background": 1552,
+        "incident": 8
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    },
+    "wheeler": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [
+        "RULE-NET-002"
+      ],
+      "iforest_incident_roc_auc": 0.6476,
+      "iforest_incident_roc_auc_ip": 0.922,
+      "role": "held-out",
+      "test_days": 1.0,
+      "test_windows_by_label": {
+        "background": 1388,
+        "incident": 13
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    },
+    "wilson": {
+      "gate_disabled": {},
+      "gate_persistent_findings": [
+        "RULE-NET-002"
+      ],
+      "iforest_incident_roc_auc": 0.8198,
+      "iforest_incident_roc_auc_ip": 0.9514,
+      "role": "held-out",
+      "test_days": 2.0,
+      "test_windows_by_label": {
+        "background": 3831,
+        "incident": 13
+      },
+      "versions": {
+        "features": "fs-1.2.0",
+        "iforest": "iforest-1.1.0"
+      }
+    }
+  },
+  "variant": "asis"
+}

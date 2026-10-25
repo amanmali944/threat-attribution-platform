@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.event import Event
-from app.models.entity import Entity
+from app.models.entity import Entity, generate_entity_id
 from app.schemas.event import (
     EventCreate,
     EventIngestResponse,
@@ -50,6 +50,11 @@ def parse_datetime(dt_val: Any) -> datetime:
 @router.post("", response_model=EventIngestResponse, status_code=status.HTTP_201_CREATED)
 def create_event(event_in: EventCreate, db: Session = Depends(get_db)):
     event_id = event_in.event_id or f"evt-{event_in.tenant_id[:4]}-{int(datetime.now().timestamp())}"
+    raw_entities = [
+        ent.model_dump() if hasattr(ent, "model_dump") else ent
+        for ent in event_in.entities
+    ] if event_in.entities else []
+
     db_event = Event(
         id=event_id,
         tenant_id=event_in.tenant_id,
@@ -58,22 +63,27 @@ def create_event(event_in: EventCreate, db: Session = Depends(get_db)):
         observed_at=event_in.observed_at,
         severity=event_in.severity,
         payload=event_in.payload,
+        entities=raw_entities,
+        event_metadata=event_in.metadata or {},
     )
     db.add(db_event)
 
-    # Automatically register any embedded entities in the entities table
+    # Automatically register any embedded entities in the entities table with deterministic ID (CR-06)
     if event_in.entities:
         for ent in event_in.entities:
             existing = (
                 db.query(Entity)
                 .filter(
                     Entity.tenant_id == event_in.tenant_id,
+                    Entity.entity_type == ent.entity_type,
                     Entity.identifier == ent.identifier,
                 )
                 .first()
             )
             if not existing:
+                ent_id = generate_entity_id(ent.entity_type, event_in.tenant_id, ent.identifier)
                 new_ent = Entity(
+                    id=ent_id,
                     tenant_id=event_in.tenant_id,
                     entity_type=ent.entity_type,
                     identifier=ent.identifier,

@@ -1,0 +1,1120 @@
+{
+  "data": {
+    "first_incident_window": "2022-01-24T03:00:00Z",
+    "test_days": 1.0,
+    "test_windows": 992,
+    "test_windows_by_entity_type": {
+      "host": 1,
+      "ip": 975,
+      "user": 16
+    },
+    "test_windows_by_label": {
+      "background": 815,
+      "exfiltration": 167,
+      "incident": 10
+    },
+    "train_pool_windows": 1167,
+    "validation_pool_windows": 1129
+  },
+  "dataset": "ait-lds-v2/russellmitchell",
+  "evaluated_at": "2026-10-21T12:16:21Z",
+  "incident_stages": {
+    "iforest>=0.99": {
+      "discovery": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 2
+      }
+    },
+    "iforest>=0.999": {
+      "discovery": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      }
+    },
+    "rules-1.0.0:any": {
+      "discovery": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 2
+      }
+    },
+    "rules-1.0.0:high": {
+      "discovery": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      }
+    },
+    "rules-1.1.0:any": {
+      "discovery": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 2
+      }
+    },
+    "rules-1.1.0:any|iforest>=0.999": {
+      "discovery": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": true,
+        "flagged": 1,
+        "windows": 2
+      }
+    },
+    "rules-1.1.0:high": {
+      "discovery": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      }
+    },
+    "rules-1.1.0:high|iforest>=0.999": {
+      "discovery": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 5
+      },
+      "entry": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      },
+      "privilege": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 3
+      },
+      "web_attack": {
+        "detected": false,
+        "flagged": 0,
+        "windows": 2
+      }
+    }
+  },
+  "incident_windows": [
+    {
+      "entity_id": "ent-ip-2543475a",
+      "entity_type": "ip",
+      "events": 143,
+      "iforest_most_unusual": [
+        "peer.volume_zscore",
+        "timing.interarrival_cv",
+        "timing.off_hours"
+      ],
+      "iforest_score": 0.967728,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "discovery"
+      ],
+      "window_start": "2022-01-24T03:00:00Z"
+    },
+    {
+      "entity_id": "ent-ip-907229a0",
+      "entity_type": "ip",
+      "events": 1,
+      "iforest_most_unusual": [
+        "diversity.distinct_accounts_from_ip",
+        "volume.login_count",
+        "volume.login_success_count"
+      ],
+      "iforest_score": 0.982759,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "entry"
+      ],
+      "window_start": "2022-01-24T03:00:00Z"
+    },
+    {
+      "entity_id": "ent-user-0ed15d7c",
+      "entity_type": "user",
+      "events": 1,
+      "iforest_most_unusual": [],
+      "iforest_score": null,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "entry"
+      ],
+      "window_start": "2022-01-24T03:00:00Z"
+    },
+    {
+      "entity_id": "ent-ip-2543475a",
+      "entity_type": "ip",
+      "events": 18,
+      "iforest_most_unusual": [
+        "timing.off_hours",
+        "novelty.new_target",
+        "timing.mean_interarrival_s"
+      ],
+      "iforest_score": 0.851017,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "discovery"
+      ],
+      "window_start": "2022-01-24T03:35:00Z"
+    },
+    {
+      "entity_id": "ent-ip-062e45a7",
+      "entity_type": "ip",
+      "events": 13,
+      "iforest_most_unusual": [
+        "timing.off_hours",
+        "volume.bytes_out",
+        "novelty.new_target"
+      ],
+      "iforest_score": 0.950928,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "discovery",
+        "web_attack"
+      ],
+      "window_start": "2022-01-24T03:55:00Z"
+    },
+    {
+      "entity_id": "ent-ip-2543475a",
+      "entity_type": "ip",
+      "events": 7719,
+      "iforest_most_unusual": [
+        "peer.volume_zscore",
+        "failure.http_error_rate",
+        "diversity.endpoint_entropy"
+      ],
+      "iforest_score": 0.998232,
+      "rules-1.0.0": [
+        "RULE-APP-001"
+      ],
+      "rules-1.1.0": [
+        "RULE-APP-001"
+      ],
+      "rules-1.1.0_incl_gated": [
+        "RULE-APP-001"
+      ],
+      "stages": [
+        "discovery",
+        "web_attack"
+      ],
+      "window_start": "2022-01-24T03:55:00Z"
+    },
+    {
+      "entity_id": "ent-ip-806cfdac",
+      "entity_type": "ip",
+      "events": 93,
+      "iforest_most_unusual": [
+        "peer.volume_zscore",
+        "timing.off_hours",
+        "timing.interarrival_cv"
+      ],
+      "iforest_score": 0.914677,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "discovery"
+      ],
+      "window_start": "2022-01-24T03:55:00Z"
+    },
+    {
+      "entity_id": "ent-host-fafd8994",
+      "entity_type": "host",
+      "events": 3,
+      "iforest_most_unusual": [],
+      "iforest_score": null,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "privilege"
+      ],
+      "window_start": "2022-01-24T04:35:00Z"
+    },
+    {
+      "entity_id": "ent-user-0ed15d7c",
+      "entity_type": "user",
+      "events": 2,
+      "iforest_most_unusual": [],
+      "iforest_score": null,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "privilege"
+      ],
+      "window_start": "2022-01-24T04:35:00Z"
+    },
+    {
+      "entity_id": "ent-user-b573387e",
+      "entity_type": "user",
+      "events": 1,
+      "iforest_most_unusual": [],
+      "iforest_score": null,
+      "rules-1.0.0": [],
+      "rules-1.1.0": [],
+      "rules-1.1.0_incl_gated": [],
+      "stages": [
+        "privilege"
+      ],
+      "window_start": "2022-01-24T04:35:00Z"
+    }
+  ],
+  "isolation_forest": {
+    "metadata": {
+      "feature_set_version": "fs-1.1.0",
+      "model_version": "iforest-1.0.0",
+      "params": {
+        "max_samples": 256,
+        "min_train_windows": 20,
+        "n_estimators": 200,
+        "random_state": 42
+      },
+      "types": {
+        "ip": {
+          "n_reference": 2262,
+          "n_train": 1154
+        }
+      }
+    },
+    "test_windows_without_model": 17,
+    "test_windows_without_model_by_label": {
+      "background": 13,
+      "incident": 4
+    },
+    "top10_test_windows": [
+      {
+        "entity_type": "ip",
+        "label": "incident",
+        "most_unusual": [
+          "peer.volume_zscore",
+          "failure.http_error_rate",
+          "diversity.endpoint_entropy"
+        ],
+        "score": 0.998232,
+        "window_start": "2022-01-24T03:55:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "peer.targets_zscore",
+          "peer.volume_zscore",
+          "novelty.new_target"
+        ],
+        "score": 0.998232,
+        "window_start": "2022-01-24T20:45:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "incident",
+        "most_unusual": [
+          "diversity.distinct_accounts_from_ip",
+          "volume.login_count",
+          "volume.login_success_count"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T03:00:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "diversity.distinct_accounts_from_ip",
+          "volume.login_count",
+          "volume.login_success_count"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T07:45:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "diversity.distinct_accounts_from_ip",
+          "volume.login_count",
+          "volume.login_success_count"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T08:30:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "diversity.distinct_accounts_from_ip",
+          "volume.login_count",
+          "volume.login_success_count"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T08:50:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "peer.targets_zscore",
+          "peer.volume_zscore",
+          "novelty.new_target"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T09:15:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "novelty.new_target",
+          "diversity.endpoint_entropy",
+          "peer.targets_zscore"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T09:30:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "diversity.distinct_accounts_from_ip",
+          "volume.login_count",
+          "volume.login_success_count"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T10:30:00Z"
+      },
+      {
+        "entity_type": "ip",
+        "label": "background",
+        "most_unusual": [
+          "diversity.distinct_accounts_from_ip",
+          "volume.login_count",
+          "volume.login_success_count"
+        ],
+        "score": 0.982759,
+        "window_start": "2022-01-24T11:40:00Z"
+      }
+    ]
+  },
+  "limits": [
+    "ONE intrusion (10 incident windows): recall moves in steps of 0.1 and is a single observation",
+    "the attack timeline and the incident windows' features were read while building labels (Phase 1b)",
+    "rules-1.1.0 was decided on Org Y before AIT was opened; no rule or threshold was changed after",
+    "one test day; false-alarm rates rest on 815 background windows",
+    "as-is: the exfiltration is inside the training pools, exactly as an unlabelled system would see it",
+    "Isolation Forest ECDF reference includes its own training windows (in-sample)"
+  ],
+  "protocol": "unseen dataset: rules-1.1.0 calibrated on train, gated on validation; rules-1.0.0 calibrated on train+validation; Isolation Forest fit on train, ECDF on train+validation; test scored once",
+  "rules-1.0.0": {
+    "calibration": {
+      "background_windows_by_type": {
+        "ip": 2262,
+        "user": 34
+      }
+    },
+    "per_rule": {
+      "RULE-APP-001": {
+        "disabled_by_gate": false,
+        "severity": "low",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 1
+        },
+        "title": "Web error burst (scanning)",
+        "validation_fires": 0
+      },
+      "RULE-DB-001": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Bulk data read",
+        "validation_fires": 0
+      },
+      "RULE-IDN-001": {
+        "disabled_by_gate": false,
+        "severity": "low",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Brute-force login burst",
+        "validation_fires": 0
+      },
+      "RULE-IDN-002": {
+        "disabled_by_gate": false,
+        "severity": "medium",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Password spray from one source",
+        "validation_fires": 0
+      },
+      "RULE-IDN-003": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Successful login from a never-seen source",
+        "validation_fires": 0
+      },
+      "RULE-IDN-004": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Successful login after repeated failures",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-001": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Privileged command burst",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-002": {
+        "disabled_by_gate": false,
+        "severity": "medium",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Role or privilege change",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-003": {
+        "disabled_by_gate": false,
+        "severity": "medium",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Privileged activity at an unusual hour",
+        "validation_fires": 0
+      }
+    },
+    "thresholds": {
+      "RULE-DB-001": {
+        "user": 10000.0
+      },
+      "RULE-PRIV-001": {
+        "host": 5.0,
+        "user": 5.0
+      }
+    }
+  },
+  "rules-1.1.0": {
+    "calibration": {
+      "background_windows_by_type": {
+        "ip": 1154,
+        "user": 13
+      }
+    },
+    "disabled": {},
+    "gate": {
+      "max_fire_rate": 0.005,
+      "rules": {
+        "RULE-APP-001": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 1108
+        },
+        "RULE-DB-001": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 21
+        },
+        "RULE-IDN-001": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 1129
+        },
+        "RULE-IDN-002": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 1108
+        },
+        "RULE-IDN-003": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 21
+        },
+        "RULE-IDN-004": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 1108
+        },
+        "RULE-PRIV-001": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 21
+        },
+        "RULE-PRIV-002": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 21
+        },
+        "RULE-PRIV-003": {
+          "fire_rate": 0.0,
+          "fires": 0,
+          "passed": true,
+          "windows": 21
+        }
+      }
+    },
+    "per_rule": {
+      "RULE-APP-001": {
+        "disabled_by_gate": false,
+        "severity": "low",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 1
+        },
+        "title": "Web error burst (scanning)",
+        "validation_fires": 0
+      },
+      "RULE-DB-001": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Bulk data read",
+        "validation_fires": 0
+      },
+      "RULE-IDN-001": {
+        "disabled_by_gate": false,
+        "severity": "low",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Brute-force login burst",
+        "validation_fires": 0
+      },
+      "RULE-IDN-002": {
+        "disabled_by_gate": false,
+        "severity": "medium",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Password spray from one source",
+        "validation_fires": 0
+      },
+      "RULE-IDN-003": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Successful login from a never-seen source",
+        "validation_fires": 0
+      },
+      "RULE-IDN-004": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Successful login after repeated failures",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-001": {
+        "disabled_by_gate": false,
+        "severity": "high",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Privileged command burst",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-002": {
+        "disabled_by_gate": false,
+        "severity": "medium",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Role or privilege change",
+        "validation_fires": 0
+      },
+      "RULE-PRIV-003": {
+        "disabled_by_gate": false,
+        "severity": "medium",
+        "test_fires": {
+          "background": 0,
+          "exfiltration": 0,
+          "incident": 0
+        },
+        "title": "Privileged activity at an unusual hour",
+        "validation_fires": 0
+      }
+    },
+    "threshold_ops": {
+      "RULE-DB-001": {
+        "user": ">="
+      },
+      "RULE-PRIV-001": {
+        "host": ">=",
+        "user": ">="
+      }
+    },
+    "thresholds": {
+      "RULE-DB-001": {
+        "user": 10000.0
+      },
+      "RULE-PRIV-001": {
+        "host": 5.0,
+        "user": 5.0
+      }
+    }
+  },
+  "seconds": 1.5,
+  "tasks": {
+    "exfiltration": {
+      "baselines": {
+        "event_count_only": {
+          "average_precision": 0.2449,
+          "n": 982,
+          "positives": 167,
+          "roc_auc": 0.6308
+        },
+        "random_expected_average_precision": 0.1701
+      },
+      "iforest_ranking": {
+        "average_precision": 0.0943,
+        "n": 982,
+        "positives": 167,
+        "roc_auc": 0.0759
+      },
+      "iforest_ranking_by_entity_type": {
+        "host": {
+          "average_precision": null,
+          "n": 0,
+          "positives": 0,
+          "roc_auc": null
+        },
+        "ip": {
+          "average_precision": 0.0943,
+          "n": 969,
+          "positives": 167,
+          "roc_auc": 0.0609
+        },
+        "user": {
+          "average_precision": null,
+          "n": 13,
+          "positives": 0,
+          "roc_auc": null
+        }
+      },
+      "operating_points": {
+        "iforest>=0.99": {
+          "alerts_on_excluded_windows": {
+            "incident": 1
+          },
+          "alerts_per_day": 2.0,
+          "detected": false,
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "iforest>=0.999": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.0.0:any": {
+          "alerts_on_excluded_windows": {
+            "incident": 1
+          },
+          "alerts_per_day": 1.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.0.0:high": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.1.0:any": {
+          "alerts_on_excluded_windows": {
+            "incident": 1
+          },
+          "alerts_per_day": 1.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.1.0:any|iforest>=0.999": {
+          "alerts_on_excluded_windows": {
+            "incident": 1
+          },
+          "alerts_per_day": 1.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.1.0:high": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.1.0:high|iforest>=0.999": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 167,
+          "precision": null,
+          "recall": 0.0
+        }
+      }
+    },
+    "incident": {
+      "baselines": {
+        "event_count_only": {
+          "average_precision": 0.1299,
+          "n": 825,
+          "positives": 10,
+          "roc_auc": 0.5359
+        },
+        "random_expected_average_precision": 0.0121
+      },
+      "iforest_ranking": {
+        "average_precision": 0.0922,
+        "n": 825,
+        "positives": 10,
+        "roc_auc": 0.5633
+      },
+      "iforest_ranking_by_entity_type": {
+        "host": {
+          "average_precision": null,
+          "n": 1,
+          "positives": 1,
+          "roc_auc": null
+        },
+        "ip": {
+          "average_precision": 0.1457,
+          "n": 808,
+          "positives": 6,
+          "roc_auc": 0.9324
+        },
+        "user": {
+          "average_precision": 0.1875,
+          "n": 16,
+          "positives": 3,
+          "roc_auc": 0.5
+        }
+      },
+      "operating_points": {
+        "iforest>=0.99": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 2.0,
+          "detected": true,
+          "false_alarm_windows": 1,
+          "false_alarms_per_day": 1.0,
+          "first_flagged_positive_window": "2022-01-24T03:55:00Z",
+          "latency_minutes_from_first_positive_window": 60.0,
+          "positive_windows_flagged": 1,
+          "positive_windows_total": 10,
+          "precision": 0.5,
+          "recall": 0.1
+        },
+        "iforest>=0.999": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 10,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.0.0:any": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 1.0,
+          "detected": true,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": "2022-01-24T03:55:00Z",
+          "latency_minutes_from_first_positive_window": 60.0,
+          "positive_windows_flagged": 1,
+          "positive_windows_total": 10,
+          "precision": 1.0,
+          "recall": 0.1
+        },
+        "rules-1.0.0:high": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 10,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.1.0:any": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 1.0,
+          "detected": true,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": "2022-01-24T03:55:00Z",
+          "latency_minutes_from_first_positive_window": 60.0,
+          "positive_windows_flagged": 1,
+          "positive_windows_total": 10,
+          "precision": 1.0,
+          "recall": 0.1
+        },
+        "rules-1.1.0:any|iforest>=0.999": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 1.0,
+          "detected": true,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": "2022-01-24T03:55:00Z",
+          "latency_minutes_from_first_positive_window": 60.0,
+          "positive_windows_flagged": 1,
+          "positive_windows_total": 10,
+          "precision": 1.0,
+          "recall": 0.1
+        },
+        "rules-1.1.0:high": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 10,
+          "precision": null,
+          "recall": 0.0
+        },
+        "rules-1.1.0:high|iforest>=0.999": {
+          "alerts_on_excluded_windows": {},
+          "alerts_per_day": 0.0,
+          "detected": false,
+          "false_alarm_windows": 0,
+          "false_alarms_per_day": 0.0,
+          "first_flagged_positive_window": null,
+          "latency_minutes_from_first_positive_window": null,
+          "positive_windows_flagged": 0,
+          "positive_windows_total": 10,
+          "precision": null,
+          "recall": 0.0
+        }
+      }
+    }
+  },
+  "variant": "as-is"
+}

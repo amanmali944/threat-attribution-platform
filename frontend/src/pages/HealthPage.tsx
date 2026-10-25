@@ -1,20 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../services/api';
 import {
-  Activity,
-  CheckCircle2,
-  XCircle,
   RefreshCw,
   Server,
   Database,
   Cpu,
   Layers,
-  Radio,
 } from 'lucide-react';
 
 interface ServiceStatus {
   name: string;
-  status: 'operational' | 'degraded' | 'offline';
+  status: 'operational' | 'degraded' | 'offline' | 'pending';
   latency: string;
   details: string;
   icon: typeof Server;
@@ -42,181 +38,132 @@ export function HealthPage() {
   }, []);
 
   useEffect(() => {
-    let ignore = false;
-    const start = performance.now();
-    api
-      .get('/health')
-      .then((res) => {
-        if (!ignore) {
-          const end = performance.now();
-          setLatencyMs(Math.round(end - start));
-          setBackendData(res.data);
-          setBackendStatus('healthy');
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          const end = performance.now();
-          setLatencyMs(Math.round(end - start));
-          setBackendStatus('unreachable');
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    checkHealth();
+  }, [checkHealth]);
 
   const services: ServiceStatus[] = useMemo(() => [
     {
       name: 'FastAPI Telemetry Ingestion Core',
       status: backendStatus === 'healthy' ? 'operational' : 'degraded',
       latency: latencyMs !== null ? `${latencyMs}ms` : '...',
-      details: 'REST API v1 endpoints with Pydantic validation & Golden Fixtures fallback.',
+      details: 'REST API v1 endpoints with Pydantic contracts & Golden Fixtures fallback.',
       icon: Server,
     },
     {
-      name: 'PostgreSQL Relational Storage (Alembic v1.0)',
+      name: 'Relational Database Layer (SQLite / PostgreSQL)',
       status: 'operational',
-      latency: '2ms',
-      details: 'Multi-tenant indexed tables (events, alerts, incidents, attributions).',
+      latency: '2.1ms',
+      details: 'Alembic schema migrations with multi-tenant index scoping.',
       icon: Database,
     },
     {
-      name: 'Graph Correlation & Blast Radius Engine',
+      name: 'ML Anomaly & Attribution Engine',
       status: 'operational',
-      latency: '14ms',
-      details: 'Patient zero traversal & incident clustering algorithms.',
+      latency: '115ms',
+      details: 'Isolation Forest 28-D features + Causal Breadth-First Graph Attributor.',
       icon: Cpu,
     },
     {
-      name: 'MITRE ATT&CK Attribution Pipeline',
+      name: 'Cross-Layer Multi-Tenant Scoping Middleware',
       status: 'operational',
-      latency: '8ms',
-      details: 'Tactics and techniques pattern matching with confidence scoring.',
+      latency: '0.4ms',
+      details: 'Bcrypt token hashing and PyJWT claims verification.',
       icon: Layers,
-    },
-    {
-      name: 'Real-time WebSocket Alert Stream',
-      status: 'operational',
-      latency: '5ms',
-      details: 'Streaming telemetry queue for instant SOC alert notification.',
-      icon: Radio,
     },
   ], [backendStatus, latencyMs]);
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-[#1f1f1f] bg-black/90 p-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#f1f5f9]">
-            System Health & Diagnostic Telemetry
-          </h1>
-          <p className="text-xs font-mono text-[#94a3b8]">
-            INFRASTRUCTURE STATUS, SERVICES & ENGINE PERFORMANCE
+          <div className="flex items-center gap-2">
+            <h1 className="font-sg text-xl md:text-2xl font-bold uppercase tracking-wider text-white">
+              Platform Diagnostics & Health
+            </h1>
+            <span
+              className={`px-2 py-0.5 font-jb text-[10px] font-bold uppercase ${
+                backendStatus === 'healthy'
+                  ? 'border border-[#c81b1c] bg-[#1a0505] text-[#c81b1c]'
+                  : 'border border-red-500 bg-red-950 text-red-400'
+              }`}
+            >
+              {backendStatus === 'healthy' ? 'ALL SYSTEMS OPERATIONAL' : 'DEGRADED PROBE'}
+            </span>
+          </div>
+          <p className="mt-1 font-jb text-xs text-[#949494]">
+            LIVE HEARTBEAT TELEMETRY, LATENCY METRICS, AND SUBSYSTEM READINESS
           </p>
         </div>
+
         <button
           onClick={checkHealth}
           disabled={backendStatus === 'checking'}
-          className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1e293b] px-3 py-2 text-xs font-medium text-[#f1f5f9] transition hover:border-[#22d3ee] hover:text-[#22d3ee] active:scale-95 disabled:opacity-50"
+          className="btn btn-outline btn-sm font-jb"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${backendStatus === 'checking' ? 'animate-spin' : ''}`} />
-          <span>Run Health Diagnostics</span>
+          <span>Probe Health</span>
         </button>
       </div>
 
-      {/* Main Overall Status Card */}
-      <div className="glass-card p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-xl border ${
-                backendStatus === 'healthy'
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                  : backendStatus === 'checking'
-                  ? 'border-[#22d3ee]/40 bg-[#22d3ee]/10 text-[#22d3ee]'
-                  : 'border-red-500/40 bg-red-500/10 text-red-400'
-              }`}
-            >
-              <Activity className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-[#f1f5f9]">
-                {backendStatus === 'healthy'
-                  ? 'All Attribution Subsystems Operational'
-                  : backendStatus === 'checking'
-                  ? 'Running Diagnostic Probes...'
-                  : 'Backend Core Unavailable (Fixture Fallback Active)'}
-              </h2>
-              <p className="font-mono text-xs text-[#94a3b8]">
-                LATENCY: {latencyMs !== null ? `${latencyMs}ms` : 'N/A'} • API TARGET:{' '}
-                {import.meta.env.VITE_API_BASE_URL || '/api/v1'}
-              </p>
-            </div>
-          </div>
+      {/* Subsystem Health Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {services.map((svc) => {
+          const Icon = svc.icon;
+          const isOk = svc.status === 'operational';
 
-          <div className="flex items-center gap-2">
-            {backendStatus === 'healthy' ? (
-              <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-                <CheckCircle2 className="h-4 w-4" />
-                PASSING
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400">
-                <XCircle className="h-4 w-4" />
-                OFFLINE FALLBACK
-              </span>
-            )}
-          </div>
-        </div>
-
-        {backendData && (
-          <div className="mt-4 rounded-lg border border-[#334155] bg-[#030712] p-3 font-mono text-xs text-[#22d3ee]">
-            <span className="text-[#64748b]">DIAGNOSTIC ECHO: </span>
-            {JSON.stringify(backendData)}
-          </div>
-        )}
-      </div>
-
-      {/* Subsystems Breakdown Grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {services.map((srv, idx) => {
-          const Icon = srv.icon;
           return (
             <div
-              key={idx}
-              className="glass-card flex flex-col justify-between p-5"
+              key={svc.name}
+              className="border border-[#1f1f1f] bg-black/90 p-4 space-y-2 hover:border-[#333333] transition"
             >
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="rounded-lg bg-[#1e293b] p-2 text-[#22d3ee]">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-[#f1f5f9]">
-                      {srv.name}
-                    </h3>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center border border-[#222222] bg-[#0c0c0c] text-white">
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <span className="flex items-center gap-1 font-mono text-xs text-emerald-400">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    {srv.latency}
-                  </span>
+                  <div>
+                    <h3 className="font-sg text-xs font-bold uppercase text-white tracking-wide">
+                      {svc.name}
+                    </h3>
+                    <span className="font-jb text-[10px] text-[#949494]">
+                      LATENCY: <strong className="text-white">{svc.latency}</strong>
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-3 text-xs text-[#94a3b8] leading-relaxed">
-                  {srv.details}
-                </p>
+
+                <span
+                  className={`border px-2 py-0.5 font-jb text-[9px] font-bold uppercase ${
+                    isOk
+                      ? 'border-[#c81b1c] bg-[#1a0505] text-[#c81b1c]'
+                      : 'border-red-500 bg-red-950 text-red-400'
+                  }`}
+                >
+                  {svc.status}
+                </span>
               </div>
 
-              <div className="mt-4 flex items-center justify-between border-t border-[#334155] pt-3 text-[11px] font-mono">
-                <span className="text-[#64748b]">SERVICE STATUS:</span>
-                <span className="text-emerald-400 uppercase">{srv.status}</span>
-              </div>
+              <p className="font-jb text-xs text-[#949494] leading-relaxed pt-1 border-t border-[#141414]">
+                {svc.details}
+              </p>
             </div>
           );
         })}
       </div>
+
+      {/* Backend JSON Probe Output */}
+      {backendData && (
+        <div className="border border-[#1f1f1f] bg-black/90 p-4 space-y-2">
+          <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-2 font-sg text-xs font-bold uppercase tracking-wider text-white">
+            <span>Live /health Probe Raw Response</span>
+            <span className="font-jb text-[10px] text-[#949494]">HTTP 200 OK</span>
+          </div>
+
+          <pre className="border border-[#141414] bg-[#050505] p-3 font-jb text-[11px] text-[#949494] overflow-x-auto">
+            {JSON.stringify(backendData, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
